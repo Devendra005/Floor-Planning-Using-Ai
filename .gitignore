@@ -1,0 +1,80 @@
+# ==========================================
+# VASTUCRAFT AI - Git Ignore Specification
+# ==========================================
+
+# --- Python & Virtual Environments ---
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/.venv/
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+backend/.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node.js & Frontend ---
+node_modules/
+frontend/node_modules/
+dist/
+dist-ssr/
+frontend/dist/
+frontend/dist-ssr/
+.output/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Databases & Local Storage ---
+*.db
+*.sqlite
+*.sqlite3
+vastu_planner.db
+backend/vastu_planner.db
+
+# --- Environment Variables & Secrets ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# --- IDEs & Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# --- Operating System Files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Build & Temporary Artifacts ---
+*.tmp
+*.bak
