@@ -34,31 +34,31 @@ export const VastuReportPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-10 px-6 bg-animated-grid">
+    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-6 sm:py-10 px-3 sm:px-6 bg-animated-grid">
       <div className="max-w-4xl mx-auto space-y-6 animate-slide-up">
         
         {/* Action Header */}
-        <div className="glass-panel p-5 rounded-3xl border-indigo-500/30 flex justify-between items-center shadow-2xl">
+        <div className="glass-panel p-4 sm:p-5 rounded-3xl border-indigo-500/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-2xl">
           <div>
-            <h2 className="text-xl font-black text-white flex items-center space-x-2">
-              <Award className="w-6 h-6 text-cyan-400" />
+            <h2 className="text-lg sm:text-xl font-black text-white flex items-center space-x-2">
+              <Award className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 shrink-0" />
               <span>Vastu & Structural Inspection Report</span>
             </h2>
             <p className="text-xs text-slate-400 font-medium mt-0.5">Generated for {currentProject.name}</p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-extrabold border border-slate-800 transition-all hover:scale-105"
+              className="flex-1 sm:flex-initial flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-extrabold border border-slate-800 transition-all"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Report</span>
+              <span>Print</span>
             </button>
 
             <button
               onClick={handleDownloadPdf}
-              className="shimmer-btn flex items-center space-x-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black shadow-xl shadow-emerald-500/30 transition-all hover:scale-105"
+              className="shimmer-btn flex-1 sm:flex-initial flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 px-4 py-2.5 rounded-xl text-xs font-black shadow-xl shadow-emerald-500/30 transition-all"
             >
               <Download className="w-4 h-4" />
               <span>Download PDF</span>
@@ -67,26 +67,26 @@ export const VastuReportPage: React.FC = () => {
         </div>
 
         {/* Printable Report Document Card */}
-        <div ref={reportRef} className="glass-panel-glow p-10 rounded-3xl space-y-8 text-slate-100 shadow-2xl border-indigo-500/30">
+        <div ref={reportRef} className="glass-panel-glow p-4 sm:p-10 rounded-3xl space-y-8 text-slate-100 shadow-2xl border-indigo-500/30">
           
           {/* Document Header */}
-          <div className="flex justify-between items-start border-b border-slate-800 pb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-800 pb-6">
             <div>
               <div className="flex items-center space-x-2 text-cyan-400 font-extrabold text-xs uppercase tracking-widest font-mono">
-                <Compass className="w-5 h-5 text-cyan-400 animate-spin" style={{ animationDuration: '10s' }} />
+                <Compass className="w-5 h-5 text-cyan-400 animate-spin shrink-0" style={{ animationDuration: '10s' }} />
                 <span>AI VASTU PLANNER &bull; OFFICIAL EVALUATION</span>
               </div>
-              <h1 className="text-3xl font-black text-white mt-2 tracking-tight">{currentProject.name}</h1>
-              <p className="text-xs text-slate-400 mt-1 font-medium">
+              <h1 className="text-2xl sm:text-3xl font-black text-white mt-2 tracking-tight">{currentProject.name}</h1>
+              <p className="text-xs text-slate-400 mt-1 font-medium leading-relaxed">
                 Plot: <strong className="text-slate-200">{formatDimension(plot.width, unit)} × {formatDimension(plot.length, unit)}</strong> &bull; Facing: <strong className="text-cyan-400">{plot.orientation} Facing</strong> &bull; Profile: <strong className="text-slate-200">{report.profile_used}</strong>
               </p>
             </div>
 
             {/* Circular Vastu Score Gauge */}
-            <div className="bg-slate-950 p-5 rounded-2xl border border-cyan-500/40 text-center relative overflow-hidden shadow-xl group">
+            <div className="bg-slate-950 p-4 sm:p-5 rounded-2xl border border-cyan-500/40 text-center relative overflow-hidden shadow-xl group w-full sm:w-auto">
               <div className="radar-ring" />
               <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block font-mono">Total Vastu Score</span>
-              <span className="text-4xl font-black text-gradient-cyan font-mono block mt-1">{report.total_score}</span>
+              <span className="text-3xl sm:text-4xl font-black text-gradient-cyan font-mono block mt-1">{report.total_score}</span>
               <span className="text-[10px] font-extrabold text-emerald-400 block mt-0.5">OUT OF 100 PTS</span>
             </div>
           </div>

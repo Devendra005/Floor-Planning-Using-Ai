@@ -472,15 +472,15 @@ export const WizardPage: React.FC = () => {
           )}
 
           {configMode === 'House' && (
-            <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="space-y-4 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200">
               <div className="space-y-2">
                 <label className="text-xs font-extrabold text-slate-700 uppercase">Number of Floors</label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1 sm:gap-2">
                   {[1, 2, 3, 4, 5].map((f) => (
                     <button
                       key={f}
                       onClick={() => setFloorsCount(f)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                      className={`py-2 px-0.5 sm:px-2 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
                         floorsCount === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
                       }`}
                     >
@@ -492,12 +492,12 @@ export const WizardPage: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="text-xs font-extrabold text-slate-700 uppercase">Bedrooms Count</label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1 sm:gap-2">
                   {[1, 2, 3, 4, 5].map((b) => (
                     <button
                       key={b}
                       onClick={() => setBedroomCount(b)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                      className={`py-2 px-0.5 sm:px-2 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
                         bedroomCount === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
                       }`}
                     >
@@ -509,12 +509,12 @@ export const WizardPage: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="text-xs font-extrabold text-slate-700 uppercase">Washrooms Count</label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1 sm:gap-2">
                   {[1, 2, 3, 4, 5].map((w) => (
                     <button
                       key={w}
                       onClick={() => setWashroomCount(w)}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                      className={`py-2 px-0.5 sm:px-2 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
                         washroomCount === w ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
                       }`}
                     >
@@ -524,12 +524,12 @@ export const WizardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <label className="flex items-center space-x-2 bg-white p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-2">
+                <label className="flex items-center space-x-2 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer">
                   <input type="checkbox" checked={hasPujaRoom} onChange={(e) => setHasPujaRoom(e.target.checked)} className="accent-blue-600 w-4 h-4" />
                   <span>Puja Room</span>
                 </label>
-                <label className="flex items-center space-x-2 bg-white p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer">
+                <label className="flex items-center space-x-2 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer">
                   <input type="checkbox" checked={hasMasterBedroom} onChange={(e) => setHasMasterBedroom(e.target.checked)} className="accent-blue-600 w-4 h-4" />
                   <span>Master Suite</span>
                 </label>

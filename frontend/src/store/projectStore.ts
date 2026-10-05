@@ -11,6 +11,9 @@ interface ProjectState {
   // Navigation & View mode
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
+  toggleMobileMenu: () => void;
 
   // Active Project & Candidate Plans
   currentProject: Project | null;
@@ -102,7 +105,10 @@ const defaultSnaps: SnapSettings = {
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   activeTab: 'home',
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => set({ activeTab: tab, isMobileMenuOpen: false }),
+  isMobileMenuOpen: false,
+  setIsMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
+  toggleMobileMenu: () => set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
 
   currentProject: null,
   selectedPlan: null,

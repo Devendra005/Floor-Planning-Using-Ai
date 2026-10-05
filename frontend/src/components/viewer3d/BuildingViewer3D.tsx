@@ -411,6 +411,7 @@ export const BuildingViewer3D: React.FC = () => {
   const controlsRef = useRef<any>(null);
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(true);
 
   if (!selectedPlan) return null;
 
@@ -446,14 +447,14 @@ export const BuildingViewer3D: React.FC = () => {
     <div className="h-[calc(100vh-4rem-2.5rem)] bg-slate-50 flex flex-col relative overflow-hidden bg-animated-grid select-none">
       
       {/* 3D Visual Mode & Controls Panel */}
-      <div className="absolute top-6 left-6 z-20 bg-white p-5 rounded-3xl space-y-4 max-w-xs shadow-xl border border-slate-200 animate-slide-up max-h-[85vh] overflow-y-auto">
-        <div className="space-y-2">
-          <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-widest flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Eye className="w-4 h-4 text-blue-600" />
-              <span>3D BIM Visual Mode</span>
-            </div>
+      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-20 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl space-y-3 max-w-[calc(100vw-1.5rem)] sm:max-w-xs shadow-xl border border-slate-200 animate-slide-up max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Eye className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="font-extrabold text-slate-900 text-xs uppercase tracking-widest">3D BIM Mode</span>
+          </div>
 
+          <div className="flex items-center space-x-1">
             {/* Auto-Orbit 360 Toggle Button */}
             <button
               onClick={() => setAutoRotate(!autoRotate)}
@@ -465,115 +466,127 @@ export const BuildingViewer3D: React.FC = () => {
               {autoRotate ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
               <span>360°</span>
             </button>
-          </h3>
 
-          <select
-            value={visualMode3D}
-            onChange={(e) => setVisualMode3D(e.target.value as VisualMode3D)}
-            className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-3.5 py-2.5 text-xs text-slate-900 font-extrabold focus:outline-none focus:border-blue-500 shadow-sm"
-          >
-            <option value="exterior">Exterior Render View</option>
-            <option value="steel_only">Steel-Only Rebar View</option>
-            <option value="cutaway">Horizontal Cutaway Section</option>
-            <option value="transparent">Transparent Concrete Mode</option>
-            <option value="interior">Interior Walkthrough View</option>
-            <option value="wireframe">Wireframe Model View</option>
-            <option value="structural">Structural Frame View</option>
-            <option value="top">Top Orthographic View</option>
-          </select>
-        </div>
-
-        {/* Camera View Presets */}
-        <div className="space-y-1.5 pt-2 border-t border-slate-200">
-          <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-extrabold">Camera View Presets</span>
-          <div className="grid grid-cols-2 gap-1.5">
+            {/* Mobile Expand / Collapse Toggle */}
             <button
-              onClick={() => setCameraPreset('iso')}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 text-[11px] font-bold flex items-center justify-center space-x-1"
+              onClick={() => setIsPanelOpen(!isPanelOpen)}
+              className="sm:hidden p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-black"
             >
-              <Compass className="w-3 h-3" />
-              <span>Isometric</span>
-            </button>
-            <button
-              onClick={() => setCameraPreset('steel')}
-              className="px-2.5 py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-[11px] font-bold flex items-center justify-center space-x-1"
-            >
-              <Focus className="w-3 h-3" />
-              <span>Steel Focus</span>
-            </button>
-            <button
-              onClick={() => setCameraPreset('top')}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 text-[11px] font-bold flex items-center justify-center space-x-1"
-            >
-              <Maximize2 className="w-3 h-3" />
-              <span>Top Plan</span>
-            </button>
-            <button
-              onClick={() => setCameraPreset('front')}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 text-[11px] font-bold flex items-center justify-center space-x-1"
-            >
-              <Box className="w-3 h-3" />
-              <span>Elevation</span>
+              {isPanelOpen ? '−' : '+'}
             </button>
           </div>
         </div>
 
-        {/* Cutaway Height Slider */}
-        {visualMode3D === 'cutaway' && (
-          <div className="space-y-2 pt-3 border-t border-slate-200 animate-scale-pop">
-            <div className="flex justify-between text-xs font-bold text-slate-700">
-              <span>Section Cut Height</span>
-              <span className="text-blue-600 font-mono font-extrabold">{cutawayHeight}%</span>
+        {isPanelOpen && (
+          <>
+            <select
+              value={visualMode3D}
+              onChange={(e) => setVisualMode3D(e.target.value as VisualMode3D)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-3 py-2 text-xs text-slate-900 font-extrabold focus:outline-none focus:border-blue-500 shadow-sm"
+            >
+              <option value="exterior">Exterior Render View</option>
+              <option value="steel_only">Steel-Only Rebar View</option>
+              <option value="cutaway">Horizontal Cutaway Section</option>
+              <option value="transparent">Transparent Concrete Mode</option>
+              <option value="interior">Interior Walkthrough View</option>
+              <option value="wireframe">Wireframe Model View</option>
+              <option value="structural">Structural Frame View</option>
+              <option value="top">Top Orthographic View</option>
+            </select>
+
+            {/* Camera View Presets */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-200">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-extrabold">Camera View Presets</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setCameraPreset('iso')}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 text-[11px] font-bold flex items-center justify-center space-x-1"
+                >
+                  <Compass className="w-3 h-3" />
+                  <span>Isometric</span>
+                </button>
+                <button
+                  onClick={() => setCameraPreset('steel')}
+                  className="px-2.5 py-1.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-[11px] font-bold flex items-center justify-center space-x-1"
+                >
+                  <Focus className="w-3 h-3" />
+                  <span>Steel Focus</span>
+                </button>
+                <button
+                  onClick={() => setCameraPreset('top')}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 text-[11px] font-bold flex items-center justify-center space-x-1"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Top Plan</span>
+                </button>
+                <button
+                  onClick={() => setCameraPreset('front')}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 border border-slate-200 text-[11px] font-bold flex items-center justify-center space-x-1"
+                >
+                  <Box className="w-3 h-3" />
+                  <span>Elevation</span>
+                </button>
+              </div>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={cutawayHeight}
-              onChange={(e) => setCutawayHeight(Number(e.target.value))}
-              className="w-full accent-blue-600 h-2 bg-slate-100 rounded-lg cursor-pointer"
-            />
-          </div>
-        )}
 
-        {/* 3D Layer Toggles */}
-        <div className="space-y-2 text-xs font-bold pt-3 border-t border-slate-200">
-          <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-extrabold">3D Layers Toggle</span>
-          {[
-            { id: 'walls', label: 'Architectural Walls & Doors' },
-            { id: 'roof', label: 'Roof Slab & Parapet' },
-            { id: 'columns', label: 'Structural Columns' },
-            { id: 'beams', label: 'Structural Beams' },
-            { id: 'footings', label: 'Foundation Footings' },
-            { id: 'rebars', label: 'Fe500 Rebar Cages & Stirrups' }
-          ].map((l) => (
-            <label key={l.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors shadow-sm">
-              <span className="text-slate-800 text-[11px] font-extrabold">{l.label}</span>
-              <input
-                type="checkbox"
-                checked={isSteelOnly ? (l.id === 'rebars' || l.id === 'columns' || l.id === 'beams' || l.id === 'footings') : !!(layers as any)[l.id]}
-                onChange={() => toggleLayer(l.id as any)}
-                className="accent-blue-600 w-4 h-4 rounded cursor-pointer"
-              />
-            </label>
-          ))}
-        </div>
+            {/* Cutaway Height Slider */}
+            {visualMode3D === 'cutaway' && (
+              <div className="space-y-2 pt-3 border-t border-slate-200 animate-scale-pop">
+                <div className="flex justify-between text-xs font-bold text-slate-700">
+                  <span>Section Cut Height</span>
+                  <span className="text-blue-600 font-mono font-extrabold">{cutawayHeight}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={cutawayHeight}
+                  onChange={(e) => setCutawayHeight(Number(e.target.value))}
+                  className="w-full accent-blue-600 h-2 bg-slate-100 rounded-lg cursor-pointer"
+                />
+              </div>
+            )}
+
+            {/* 3D Layer Toggles */}
+            <div className="space-y-1.5 text-xs font-bold pt-2 border-t border-slate-200">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest block font-extrabold">3D Layers Toggle</span>
+              {[
+                { id: 'walls', label: 'Architectural Walls & Doors' },
+                { id: 'roof', label: 'Roof Slab & Parapet' },
+                { id: 'columns', label: 'Structural Columns' },
+                { id: 'beams', label: 'Structural Beams' },
+                { id: 'footings', label: 'Foundation Footings' },
+                { id: 'rebars', label: 'Fe500 Rebar Cages & Stirrups' }
+              ].map((l) => (
+                <label key={l.id} className="flex items-center justify-between p-1.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors shadow-sm">
+                  <span className="text-slate-800 text-[11px] font-extrabold">{l.label}</span>
+                  <input
+                    type="checkbox"
+                    checked={isSteelOnly ? (l.id === 'rebars' || l.id === 'columns' || l.id === 'beams' || l.id === 'footings') : !!(layers as any)[l.id]}
+                    onChange={() => toggleLayer(l.id as any)}
+                    className="accent-blue-600 w-4 h-4 rounded cursor-pointer"
+                  />
+                </label>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Floating HUD Live Engine Metrics */}
-      <div className="absolute top-6 right-6 z-20 bg-white border border-slate-200 p-3.5 rounded-2xl flex items-center space-x-3 text-xs shadow-md">
-        <Activity className="w-4 h-4 text-emerald-600 animate-pulse" />
-        <div className="font-mono text-[11px] space-x-3">
+      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-20 bg-white/95 backdrop-blur border border-slate-200 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl flex items-center space-x-2 sm:space-x-3 text-xs shadow-md max-w-[calc(100vw-1.5rem)] overflow-x-auto">
+        <Activity className="w-4 h-4 text-emerald-600 animate-pulse shrink-0" />
+        <div className="font-mono text-[10px] sm:text-[11px] space-x-2 sm:space-x-3 whitespace-nowrap">
           <span className="text-slate-700">FPS: <strong className="text-emerald-700 font-extrabold">60.0</strong></span>
           <span className="text-slate-700">Cols: <strong className="text-indigo-700 font-extrabold">{selectedPlan.structure.columns.length}</strong></span>
           <span className="text-slate-700">Beams: <strong className="text-blue-700 font-extrabold">{selectedPlan.structure.beams.length}</strong></span>
-          <span className="text-slate-700">Rebar Weight: <strong className="text-red-600 font-extrabold">{selectedPlan.structure.quantity_summary.total_weight_kg || 46.4} kg</strong></span>
+          <span className="text-slate-700">Rebar: <strong className="text-red-600 font-extrabold">{selectedPlan.structure.quantity_summary.total_weight_kg || 46.4} kg</strong></span>
         </div>
       </div>
 
       {/* Rebar Detailing Legend & Spec Overlay in Steel-Only Mode */}
       {isSteelOnly && (
-        <div className="absolute bottom-6 right-6 z-20 bg-slate-900/95 backdrop-blur text-white border border-slate-700 p-4 rounded-2xl space-y-2.5 text-xs shadow-2xl max-w-sm animate-slide-up">
+        <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 z-20 bg-slate-900/95 backdrop-blur text-white border border-slate-700 p-3 sm:p-4 rounded-xl sm:rounded-2xl space-y-2 text-xs shadow-2xl max-w-[calc(100vw-1.5rem)] sm:max-w-sm animate-slide-up">
           <div className="flex items-center justify-between border-b border-slate-700 pb-2">
             <span className="font-mono font-extrabold text-red-400 text-xs uppercase tracking-wider flex items-center space-x-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block" />
@@ -581,42 +594,38 @@ export const BuildingViewer3D: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-sm bg-red-500 shrink-0" />
+          <div className="grid grid-cols-2 gap-2 font-mono text-[10px] sm:text-[11px]">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-red-500 shrink-0" />
               <span>Col Rebar: 16mm Ø</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-sm bg-orange-400 shrink-0" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-orange-400 shrink-0" />
               <span>Col Stirrups: 8mm Ø</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-sm bg-blue-500 shrink-0" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 shrink-0" />
               <span>Beam Rebar: 16mm Ø</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-sm bg-sky-400 shrink-0" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-sky-400 shrink-0" />
               <span>Beam Stirrups: 8mm Ø</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-sm bg-amber-500 shrink-0" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 shrink-0" />
               <span>Footing Mat: 12mm Ø</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-sm bg-cyan-400 shrink-0" />
+            <div className="flex items-center space-x-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 shrink-0" />
               <span>Slab Mesh: 10mm Ø</span>
             </div>
-          </div>
-
-          <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
-            * Conforms to IS 1786 High Yield Strength Deformed Bars & IS 456 Structural Code.
           </div>
         </div>
       )}
 
       {/* 3D Element Inspector Overlay Panel when an element is selected */}
       {selectedElementId && (
-        <div className="absolute top-20 right-6 z-30 bg-white/95 backdrop-blur border border-blue-300 p-4 rounded-2xl shadow-2xl space-y-2 text-xs w-72 animate-slide-up">
+        <div className="absolute top-16 sm:top-20 right-3 sm:right-6 z-30 bg-white/95 backdrop-blur border border-blue-300 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl shadow-2xl space-y-2 text-xs w-[calc(100vw-1.5rem)] sm:w-72 animate-slide-up">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <span className="font-extrabold text-blue-700 uppercase tracking-wider flex items-center space-x-1.5">
               <Box className="w-4 h-4 text-blue-600" />

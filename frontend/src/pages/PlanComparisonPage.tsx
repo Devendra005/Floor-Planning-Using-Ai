@@ -26,40 +26,40 @@ export const PlanComparisonPage: React.FC = () => {
   const plan = selectedPlan;
 
   return (
-    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-10 px-6 bg-animated-grid">
-      <div className="max-w-6xl mx-auto space-y-8 animate-slide-up">
+    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-6 sm:py-10 px-3 sm:px-6 bg-animated-grid">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-slide-up">
         
         {/* Header */}
-        <div className="glass-panel p-6 rounded-3xl border-indigo-500/30 shadow-2xl flex items-center justify-between">
+        <div className="glass-panel p-4 sm:p-6 rounded-3xl border-indigo-500/30 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black text-white flex items-center space-x-3">
-              <Sparkles className="w-7 h-7 text-cyan-400" />
+            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center space-x-2 sm:space-x-3">
+              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400 shrink-0" />
               <span>Master Layout Analytics & Vastu Audit</span>
             </h2>
-            <p className="text-sm text-slate-400 mt-1 font-medium">Detailed breakdown of space utilization, Vastu score, and structural grid alignment</p>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">Detailed breakdown of space utilization, Vastu score, and structural grid alignment</p>
           </div>
           
-          <div className="bg-emerald-950/80 px-4 py-2 rounded-2xl border border-emerald-500/40 flex items-center space-x-2 text-xs font-mono text-emerald-300">
+          <div className="bg-emerald-950/80 px-3.5 py-1.5 rounded-2xl border border-emerald-500/40 flex items-center space-x-2 text-xs font-mono text-emerald-300 shrink-0">
             <Award className="w-4 h-4 text-amber-400" />
             <span>VASTU SCORE: {plan.vastu_score}/100</span>
           </div>
         </div>
 
         {/* Master Plan Card */}
-        <div className="glass-panel-glow p-8 rounded-3xl space-y-8 border-indigo-500/30">
-          <div className="flex justify-between items-start border-b border-slate-800 pb-6">
+        <div className="glass-panel-glow p-4 sm:p-8 rounded-3xl space-y-6 sm:space-y-8 border-indigo-500/30">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-800 pb-6">
             <div>
               <span className="text-xs font-black uppercase text-gradient-cyan tracking-widest font-mono">Clean & Beautiful Layout</span>
-              <h3 className="text-2xl font-black text-white mt-1">{plan.name}</h3>
-              <p className="text-sm text-slate-400 mt-1">{currentProject.plot.floors_count || 1} Story &bull; Facing: {currentProject.plot.orientation} &bull; {plan.rooms.length} Configured Rooms</p>
+              <h3 className="text-xl sm:text-2xl font-black text-white mt-1">{plan.name}</h3>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">{currentProject.plot.floors_count || 1} Story &bull; Facing: {currentProject.plot.orientation} &bull; {plan.rooms.length} Configured Rooms</p>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab('editor2d')}
-                className="shimmer-btn flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold px-6 py-3 rounded-2xl text-sm shadow-xl shadow-indigo-600/30 transition-all hover:scale-105"
+                className="shimmer-btn flex-1 sm:flex-initial flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm shadow-xl shadow-indigo-600/30 transition-all"
               >
-                <span>Open 2D Blueprint Editor</span>
+                <span>2D Blueprint</span>
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
               </button>
               <button

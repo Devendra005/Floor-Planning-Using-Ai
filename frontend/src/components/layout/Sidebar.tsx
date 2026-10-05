@@ -6,10 +6,23 @@ import {
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, selectedPlan } = useProjectStore();
+  const { activeTab, setActiveTab, selectedPlan, isMobileMenuOpen, setIsMobileMenuOpen } = useProjectStore();
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 shrink-0 shadow-sm z-30 select-none">
+    <>
+      {/* Mobile Drawer Backdrop Overlay */}
+      <div
+        onClick={() => setIsMobileMenuOpen(false)}
+        className={`fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ${
+          isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col justify-between p-4 shrink-0 shadow-2xl transition-transform duration-300 ease-in-out select-none md:static md:w-64 md:translate-x-0 md:z-30 md:shadow-sm ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       <div className="space-y-5">
         
         {/* Brand Header */}
@@ -203,5 +216,6 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
