@@ -23,8 +23,18 @@ class SteelEngine:
         rebars: List[RebarSpec] = []
         bar_schedule: List[BarBendingScheduleItem] = []
 
-        # 1. Column Reinforcement (C1-L1: 4x 16mm vertical + C1-T1: 8mm ties @ 150mm)
+        # Helper to extract a short index from ID (e.g. BM-01-F0 -> 1, COL-02-F0 -> 2)
+        def get_short_num(elem_id: str) -> int:
+            parts = elem_id.split('-')
+            for p in parts:
+                if p.isdigit():
+                    return int(p)
+            return 1
+
+        # 1. Column Reinforcement (C1-01: 4x 16mm vertical + C1-02: 8mm ties @ 150mm)
         for col in columns:
+            col_num = get_short_num(col.id)
+            c_tag = f"C{col_num}" if (col.floor or 0) == 0 else f"C{col_num}-F{col.floor}"
             col_height = col.height if col.height > 1.0 else 3.0
             fl = col.floor or 0
             base_z = fl * 3.0
@@ -40,7 +50,7 @@ class SteelEngine:
                     member_id=col.id,
                     member_type="COLUMN",
                     floor=fl,
-                    bar_mark=f"{col.id}-L1",
+                    bar_mark=f"{c_tag}-01",
                     bar_type="LONGITUDINAL",
                     diameter_mm=16,
                     count=4,
@@ -49,7 +59,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="STRAIGHT",
                     zone="VERTICAL",
-                    position="VERTICAL",
+                    position="Vertical Main",
                     start_point=[col.x, col.y, base_z],
                     end_point=[col.x, col.y, top_z],
                     individual_length_m=round(long_len, 2),
@@ -59,7 +69,7 @@ class SteelEngine:
                 )
             )
 
-            # Lateral Ties (C1-T1)
+            # Lateral Ties (C1-02)
             num_ties = max(4, int(col_height / 0.15) + 1)
             tie_perimeter = 2 * (col.width - 0.08 + col.depth - 0.08) + 0.24
             tie_tot_len = tie_perimeter * num_ties
@@ -71,7 +81,7 @@ class SteelEngine:
                     member_id=col.id,
                     member_type="COLUMN",
                     floor=fl,
-                    bar_mark=f"{col.id}-T1",
+                    bar_mark=f"{c_tag}-02",
                     bar_type="STIRRUP",
                     diameter_mm=8,
                     count=num_ties,
@@ -80,7 +90,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="STIRRUP_RECT",
                     zone="TIES",
-                    position="PERPENDICULAR",
+                    position="Column Ties",
                     start_point=[col.x, col.y, base_z + 0.1],
                     end_point=[col.x, col.y, top_z - 0.1],
                     individual_length_m=round(tie_perimeter, 2),
@@ -90,45 +100,17 @@ class SteelEngine:
                 )
             )
 
-        # 2. Beam Reinforcement (B1-T1: Top 2-16mm, B1-B1: Bottom 3-16mm, B1-S1: Stirrups @ 150mm)
+        # 2. Beam Reinforcement (B1-01: Bottom 3-16mm, B1-02: Top 2-16mm, B1-03: Stirrups @ 150mm)
         for beam in beams:
+            bm_num = get_short_num(beam.id)
+            b_tag = f"B{bm_num}" if (beam.floor or 0) == 0 else f"B{bm_num}-F{beam.floor}"
             b_span = beam.span if beam.span > 0.5 else 4.2
             b_width = beam.section_width if beam.section_width > 0.1 else 0.23
             b_depth = beam.section_depth if beam.section_depth > 0.2 else 0.45
             fl = beam.floor or 0
             beam_z = beam.start_point[2] if len(beam.start_point) > 2 else (fl + 1) * 3.0
 
-            # Top Longitudinal Bars (B1-T1)
-            top_len = b_span + 0.5
-            top_tot_len = top_len * 2
-            top_wt = calculate_rebar_weight(16, top_tot_len)
-
-            rebars.append(
-                RebarSpec(
-                    element_id=beam.id,
-                    member_id=beam.id,
-                    member_type="BEAM",
-                    floor=fl,
-                    bar_mark=f"{beam.id}-T1",
-                    bar_type="TOP",
-                    diameter_mm=16,
-                    count=2,
-                    spacing_mm=150,
-                    cover_mm=30,
-                    grade="Fe500",
-                    shape_code="L_HOOK",
-                    zone="TOP_SUPPORT",
-                    position="TOP_INSIDE",
-                    start_point=[beam.start_point[0], beam.start_point[1], beam_z],
-                    end_point=[beam.end_point[0], beam.end_point[1], beam_z],
-                    individual_length_m=round(top_len, 2),
-                    total_length_m=round(top_tot_len, 2),
-                    weight_kg=top_wt,
-                    source="structured_reinforcement_detailing_engine"
-                )
-            )
-
-            # Bottom Longitudinal Bars (B1-B1)
+            # Bottom Longitudinal Bars (B1-01) - Bottom Main Tension
             bot_len = b_span + 0.5
             bot_tot_len = bot_len * 3
             bot_wt = calculate_rebar_weight(16, bot_tot_len)
@@ -139,7 +121,7 @@ class SteelEngine:
                     member_id=beam.id,
                     member_type="BEAM",
                     floor=fl,
-                    bar_mark=f"{beam.id}-B1",
+                    bar_mark=f"{b_tag}-01",
                     bar_type="BOTTOM",
                     diameter_mm=16,
                     count=3,
@@ -148,7 +130,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="L_HOOK",
                     zone="BOTTOM_MIDSPAN",
-                    position="BOTTOM_INSIDE",
+                    position="Bottom Main Bar",
                     start_point=[beam.start_point[0], beam.start_point[1], beam_z - b_depth + 0.05],
                     end_point=[beam.end_point[0], beam.end_point[1], beam_z - b_depth + 0.05],
                     individual_length_m=round(bot_len, 2),
@@ -158,7 +140,37 @@ class SteelEngine:
                 )
             )
 
-            # Closed Stirrups (B1-S1)
+            # Top Longitudinal Bars (B1-02) - Top Main Support
+            top_len = b_span + 0.5
+            top_tot_len = top_len * 2
+            top_wt = calculate_rebar_weight(16, top_tot_len)
+
+            rebars.append(
+                RebarSpec(
+                    element_id=beam.id,
+                    member_id=beam.id,
+                    member_type="BEAM",
+                    floor=fl,
+                    bar_mark=f"{b_tag}-02",
+                    bar_type="TOP",
+                    diameter_mm=16,
+                    count=2,
+                    spacing_mm=150,
+                    cover_mm=30,
+                    grade="Fe500",
+                    shape_code="L_HOOK",
+                    zone="TOP_SUPPORT",
+                    position="Top Main Bar",
+                    start_point=[beam.start_point[0], beam.start_point[1], beam_z],
+                    end_point=[beam.end_point[0], beam.end_point[1], beam_z],
+                    individual_length_m=round(top_len, 2),
+                    total_length_m=round(top_tot_len, 2),
+                    weight_kg=top_wt,
+                    source="structured_reinforcement_detailing_engine"
+                )
+            )
+
+            # Closed Stirrups (B1-03)
             num_bm_ties = max(4, int(b_span / 0.15) + 1)
             bm_tie_perim = 2 * (b_width - 0.06 + b_depth - 0.06) + 0.2
             bm_tie_tot = bm_tie_perim * num_bm_ties
@@ -170,7 +182,7 @@ class SteelEngine:
                     member_id=beam.id,
                     member_type="BEAM",
                     floor=fl,
-                    bar_mark=f"{beam.id}-S1",
+                    bar_mark=f"{b_tag}-03",
                     bar_type="STIRRUP",
                     diameter_mm=8,
                     count=num_bm_ties,
@@ -179,7 +191,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="STIRRUP_RECT",
                     zone="FULL_SPAN",
-                    position="PERPENDICULAR",
+                    position="Stirrup",
                     start_point=[beam.start_point[0], beam.start_point[1], beam_z],
                     end_point=[beam.end_point[0], beam.end_point[1], beam_z],
                     individual_length_m=round(bm_tie_perim, 2),
@@ -189,8 +201,10 @@ class SteelEngine:
                 )
             )
 
-        # 3. Slab Reinforcement (S1-M1: Main 10mm @ 150mm, S1-D1: Distribution 8mm @ 200mm)
+        # 3. Slab Reinforcement (S1-01: Main 10mm @ 150mm, S1-02: Distribution 8mm @ 200mm)
         for slab in slabs:
+            sl_num = get_short_num(slab.id)
+            s_tag = f"S{sl_num}" if (slab.floor or 0) == 0 else f"S{sl_num}-F{slab.floor}"
             fl = slab.floor or 0
             slab_z = (fl + 1) * 3.0
 
@@ -219,7 +233,7 @@ class SteelEngine:
                     member_id=slab.id,
                     member_type="SLAB",
                     floor=fl,
-                    bar_mark=f"{slab.id}-M1",
+                    bar_mark=f"{s_tag}-01",
                     bar_type="MAIN_MESH",
                     diameter_mm=10,
                     count=num_main,
@@ -228,7 +242,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="STRAIGHT",
                     zone="BOTTOM_MAT",
-                    position="LONGITUDINAL",
+                    position="Main Slab Mesh",
                     start_point=[s_x, s_y, slab_z],
                     end_point=[s_x + s_wid, s_y + s_len, slab_z],
                     individual_length_m=round(s_len, 2),
@@ -248,7 +262,7 @@ class SteelEngine:
                     member_id=slab.id,
                     member_type="SLAB",
                     floor=fl,
-                    bar_mark=f"{slab.id}-D1",
+                    bar_mark=f"{s_tag}-02",
                     bar_type="DISTRIBUTION",
                     diameter_mm=8,
                     count=num_dist,
@@ -257,7 +271,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="STRAIGHT",
                     zone="BOTTOM_MAT",
-                    position="TRANSVERSE",
+                    position="Distribution Mesh",
                     start_point=[s_x, s_y, slab_z + 0.01],
                     end_point=[s_x + s_wid, s_y + s_len, slab_z + 0.01],
                     individual_length_m=round(s_wid, 2),
@@ -267,8 +281,10 @@ class SteelEngine:
                 )
             )
 
-        # 4. Footing Reinforcement (F1-B1 & F1-B2: Mesh 12mm @ 150mm)
+        # 4. Footing Reinforcement (F1-01: Mesh 12mm @ 150mm)
         for ft in footings:
+            ft_num = get_short_num(ft.id)
+            f_tag = f"F{ft_num}"
             ft_w = ft.width if ft.width > 0.5 else 1.5
             ft_l = ft.length if ft.length > 0.5 else 1.5
             num_ft_bars = max(2, int(ft_w / 0.15) + 1)
@@ -281,7 +297,7 @@ class SteelEngine:
                     member_id=ft.id,
                     member_type="FOOTING",
                     floor=0,
-                    bar_mark=f"{ft.id}-B1",
+                    bar_mark=f"{f_tag}-01",
                     bar_type="MAIN_MESH",
                     diameter_mm=12,
                     count=num_ft_bars * 2,
@@ -290,7 +306,7 @@ class SteelEngine:
                     grade="Fe500",
                     shape_code="U_HOOK",
                     zone="BOTTOM_MAT",
-                    position="BOTH_DIRECTIONS",
+                    position="Footing Bottom Mat",
                     start_point=[ft.x, ft.y, -1.5],
                     end_point=[ft.x + ft_w, ft.y + ft_l, -1.5],
                     individual_length_m=round(ft_l + 0.4, 2),

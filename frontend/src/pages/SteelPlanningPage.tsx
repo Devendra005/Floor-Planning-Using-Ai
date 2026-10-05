@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
+import { InteractiveSteelView3D } from '../components/steel/InteractiveSteelView3D';
 import { SteelDashboard } from '../components/steel/SteelDashboard';
 import { BarBendingSchedule } from '../components/steel/BarBendingSchedule';
 import { ClashDetectionStudio } from '../components/steel/ClashDetectionStudio';
@@ -7,12 +8,12 @@ import { SectionDetails2D } from '../components/steel/SectionDetails2D';
 import { StructuralTreeExplorer } from '../components/steel/StructuralTreeExplorer';
 import { RevisionReviewStudio } from '../components/steel/RevisionReviewStudio';
 import {
-  Layers, Box, BarChart2, ShieldAlert, FileText, FileSpreadsheet, Sliders, Award, Compass, Cpu
+  Layers, Box, BarChart2, ShieldAlert, FileText, FileSpreadsheet, Sliders, Award, Compass, Cpu, Eye
 } from 'lucide-react';
 
 export const SteelPlanningPage: React.FC = () => {
   const { currentProject, selectedPlan, setActiveTab } = useProjectStore();
-  const [subTab, setSubTab] = useState<'dashboard' | 'bbs' | 'clashes' | 'section2d' | 'tree' | 'review'>('dashboard');
+  const [subTab, setSubTab] = useState<'3d_steel' | 'dashboard' | 'bbs' | 'clashes' | 'section2d' | 'tree' | 'review'>('3d_steel');
 
   if (!currentProject || !selectedPlan) {
     return (
@@ -33,6 +34,7 @@ export const SteelPlanningPage: React.FC = () => {
   }
 
   const subNav = [
+    { id: '3d_steel', label: '3D Steel Mapping & Inspector', icon: Eye },
     { id: 'dashboard', label: 'Steel Dashboard', icon: BarChart2 },
     { id: 'bbs', label: 'Bar Bending Schedule (BBS)', icon: FileSpreadsheet },
     { id: 'clashes', label: 'Clash Detection', icon: ShieldAlert },
@@ -80,6 +82,7 @@ export const SteelPlanningPage: React.FC = () => {
 
         {/* Dynamic Sub-View Render */}
         <main className="animate-scale-pop">
+          {subTab === '3d_steel' && <InteractiveSteelView3D />}
           {subTab === 'dashboard' && <SteelDashboard />}
           {subTab === 'bbs' && <BarBendingSchedule />}
           {subTab === 'clashes' && <ClashDetectionStudio />}

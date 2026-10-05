@@ -3,8 +3,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { Layers, Sliders, ChevronRight, Box, ShieldCheck } from 'lucide-react';
 
 export const StructuralTreeExplorer: React.FC = () => {
-  const { selectedPlan, setActiveTab } = useProjectStore();
-  const [explodedPercent, setExplodedPercent] = useState<number>(0);
+  const { selectedPlan, setActiveTab, explodedPercent, setExplodedPercent } = useProjectStore();
 
   if (!selectedPlan) return null;
 

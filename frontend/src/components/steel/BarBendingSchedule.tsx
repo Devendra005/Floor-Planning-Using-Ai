@@ -4,13 +4,17 @@ import { BarBendingScheduleItem } from '../../types';
 import { Search, FileSpreadsheet, CheckCircle2, Layers, Cpu, HardDrive } from 'lucide-react';
 
 export const BarBendingSchedule: React.FC = () => {
-  const { selectedPlan, selectedStructuralId, setSelectedStructuralId } = useProjectStore();
+  const {
+    selectedPlan, selectedStructuralId, setSelectedStructuralId,
+    selectedBarMark, setSelectedBarMark, setActiveTab
+  } = useProjectStore();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
 
   if (!selectedPlan) return null;
 
   const schedule: BarBendingScheduleItem[] = selectedPlan.structure.bar_schedule || [];
+  const rebars = selectedPlan.structure.rebars || [];
   const summary = selectedPlan.structure.quantity_summary;
 
   const filtered = schedule.filter(item => {
@@ -21,10 +25,13 @@ export const BarBendingSchedule: React.FC = () => {
   });
 
   const handleExportCsv = () => {
-    const headers = ['Bar Mark', 'Member ID', 'Member Type', 'Floor', 'Bar Type', 'Diameter (mm)', 'Grade', 'Quantity', 'Spacing (mm)', 'Cut Length (m)', 'Total Length (m)', 'Shape Code', 'Weight (kg)'];
-    const rows = filtered.map(i => [
-      i.bar_mark, i.member_id, i.member_type, i.floor, i.bar_type, i.diameter_mm, i.grade, i.quantity, i.spacing_mm, i.individual_length_m, i.total_length_m, i.shape_code, i.weight_kg
-    ]);
+    const headers = ['Bar ID', 'Member ID', 'Member Type', 'Floor', 'Bar Type', 'Position', 'Diameter (mm)', 'Grade', 'Quantity', 'Spacing (mm)', 'Cut Length (m)', 'Total Length (m)', 'Shape Code', 'Weight (kg)'];
+    const rows = filtered.map(i => {
+      const spec = rebars.find(r => r.bar_mark === i.bar_mark);
+      return [
+        i.bar_mark, i.member_id, i.member_type, i.floor, i.bar_type, spec?.position || i.position || 'Standard', i.diameter_mm, i.grade, i.quantity, i.spacing_mm, i.individual_length_m, i.total_length_m, i.shape_code, i.weight_kg
+      ];
+    });
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -86,7 +93,7 @@ export const BarBendingSchedule: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Filter Bar Mark or Member ID..."
+              placeholder="Filter Bar ID or Member ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
@@ -121,26 +128,36 @@ export const BarBendingSchedule: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 font-mono">
               <tr>
-                <th className="p-3.5">Bar Mark</th>
-                <th className="p-3.5">Member ID</th>
+                <th className="p-3.5">Bar ID</th>
+                <th className="p-3.5">Beam / Member ID</th>
                 <th className="p-3.5">Member Type</th>
+                <th className="p-3.5">Position</th>
                 <th className="p-3.5">Dia (mm)</th>
                 <th className="p-3.5">Grade</th>
                 <th className="p-3.5">Qty</th>
                 <th className="p-3.5">Spacing</th>
                 <th className="p-3.5">Cut Len (m)</th>
-                <th className="p-3.5">Tot Len (m)</th>
-                <th className="p-3.5">Shape Code</th>
                 <th className="p-3.5 font-mono text-cyan-400">Weight (kg)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80 text-slate-300 font-medium">
               {filtered.map((item, idx) => {
-                const isSelected = selectedStructuralId === item.bar_mark || selectedStructuralId === item.member_id;
+                const spec = rebars.find(r => r.bar_mark === item.bar_mark);
+                const isSelected = selectedBarMark === item.bar_mark || selectedStructuralId === item.bar_mark || selectedStructuralId === item.member_id;
+                const posLabel = spec?.position || item.position || item.bar_type;
+
                 return (
                   <tr
                     key={idx}
-                    onClick={() => setSelectedStructuralId(isSelected ? null : item.bar_mark)}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedBarMark(null);
+                        setSelectedStructuralId(null);
+                      } else {
+                        setSelectedBarMark(item.bar_mark);
+                        setSelectedStructuralId(item.member_id);
+                      }
+                    }}
                     className={`cursor-pointer transition-colors ${
                       isSelected ? 'bg-cyan-950/80 border-l-4 border-cyan-400 text-white font-bold' : 'hover:bg-slate-950/60'
                     }`}
@@ -155,17 +172,14 @@ export const BarBendingSchedule: React.FC = () => {
                         {item.member_type}
                       </span>
                     </td>
+                    <td className="p-3.5 font-mono text-cyan-300 font-bold">
+                      {posLabel}
+                    </td>
                     <td className="p-3.5 font-mono font-bold text-amber-400">Ø{item.diameter_mm}</td>
                     <td className="p-3.5 font-mono">{item.grade}</td>
                     <td className="p-3.5 font-mono">{item.quantity}</td>
-                    <td className="p-3.5 font-mono">{item.spacing_mm} mm</td>
+                    <td className="p-3.5 font-mono">{item.spacing_mm ? `${item.spacing_mm} mm` : '—'}</td>
                     <td className="p-3.5 font-mono">{item.individual_length_m.toFixed(2)} m</td>
-                    <td className="p-3.5 font-mono">{item.total_length_m.toFixed(2)} m</td>
-                    <td className="p-3.5">
-                      <span className="text-[10px] font-mono uppercase bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-purple-300">
-                        {item.shape_code}
-                      </span>
-                    </td>
                     <td className="p-3.5 font-mono text-emerald-400 font-extrabold">{item.weight_kg.toFixed(2)} kg</td>
                   </tr>
                 );

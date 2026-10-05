@@ -45,7 +45,10 @@ const BuildingMesh: React.FC<{ selectedElementId: string | null; setSelectedElem
   selectedElementId,
   setSelectedElementId
 }) => {
-  const { currentProject, selectedPlan, layers, visualMode3D, cutawayHeight } = useProjectStore();
+  const {
+    currentProject, selectedPlan, layers, visualMode3D, cutawayHeight,
+    selectedBarMark, setSelectedBarMark, explodedPercent, setSelectedStructuralId
+  } = useProjectStore();
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
 
   if (!currentProject || !selectedPlan) return null;
@@ -281,12 +284,17 @@ const BuildingMesh: React.FC<{ selectedElementId: string | null; setSelectedElem
 
       {/* 3D Structural Columns & Rebar Cages Across All Stories */}
       {(layers.columns || isSteelOnly || visualMode3D === 'structural') && selectedPlan.structure.columns.map((col) => {
+        if (isNaN(col.x) || isNaN(col.y)) return null;
         const fl = col.floor || 0;
         const colH = col.height || 3.0;
         const colW = col.width || 0.3;
         const colD = col.depth || 0.3;
-        const colY = fl * 3.0 + colH / 2;
+        const colY = fl * 3.0 + colH / 2 + (explodedPercent / 100) * fl * 1.5;
         const isSelected = selectedElementId === col.id;
+
+        const colRebars = (selectedPlan.structure.rebars || []).filter(r => r.element_id === col.id || r.member_id === col.id);
+        const mainColSpec = colRebars.find(r => r.bar_type === 'LONGITUDINAL');
+        const tieColSpec = colRebars.find(r => r.bar_type === 'STIRRUP');
 
         return (
           <group
@@ -306,13 +314,23 @@ const BuildingMesh: React.FC<{ selectedElementId: string | null; setSelectedElem
               />
             </mesh>
 
-            {/* 3D Procedural Fe500 Steel Rebar Cage (4 Main Corner Bars + Stirrup Rings) */}
+            {/* 3D Fe500 Steel Rebar Cage */}
             {(layers.rebars || isSteelOnly) && (
               <ColumnRebarCage3D
                 width={colW}
                 depth={colD}
                 height={colH}
                 isSteelOnly={isSteelOnly}
+                selectedBarMark={selectedBarMark}
+                columnBarMarks={{
+                  mainMark: mainColSpec?.bar_mark,
+                  tieMark: tieColSpec?.bar_mark
+                }}
+                explodedOffset={explodedPercent / 100}
+                onSelectBarMark={(mark) => {
+                  setSelectedBarMark(mark);
+                  setSelectedStructuralId(mark);
+                }}
               />
             )}
           </group>
@@ -323,26 +341,38 @@ const BuildingMesh: React.FC<{ selectedElementId: string | null; setSelectedElem
       {(layers.beams || isSteelOnly || visualMode3D === 'structural') && selectedPlan.structure.beams.map((bm) => {
         const start = bm.start_point || [0, 0, 0];
         const end = bm.end_point || [0, 0, 0];
+        const dx = end[0] - start[0];
+        const dz = end[1] - start[1];
+        const span = Math.sqrt(dx * dx + dz * dz);
+        const bLength = Math.max(span, bm.span || 0.5);
+
+        if (isNaN(start[0]) || isNaN(start[1]) || isNaN(end[0]) || isNaN(end[1]) || bLength <= 0.05) return null;
+
         const cx = (start[0] + end[0]) / 2;
         const cz = (start[1] + end[1]) / 2;
         const bDepth = bm.section_depth || 0.35;
         const bWidth = bm.section_width || 0.23;
-        const beamY = start[2] ? start[2] - bDepth / 2 : ((bm.floor || 0) + 1) * 3.0 - bDepth / 2;
-        const lenX = Math.abs(end[0] - start[0]);
-        const lenZ = Math.abs(end[1] - start[1]);
-        const isHorizontalX = lenX >= lenZ;
-        const bLength = Math.max(lenX, lenZ, 0.5);
+        const fl = bm.floor || 0;
+        const baseBeamY = start[2] ? start[2] - bDepth / 2 : (fl + 1) * 3.0 - bDepth / 2;
+        const beamY = baseBeamY + (explodedPercent / 100) * (fl + 0.5) * 1.5;
+        const angleY = -Math.atan2(dz, dx);
         const isSelected = selectedElementId === bm.id;
+
+        const bmRebars = (selectedPlan.structure.rebars || []).filter(r => r.element_id === bm.id || r.member_id === bm.id);
+        const topSpec = bmRebars.find(r => r.bar_type === 'TOP');
+        const botSpec = bmRebars.find(r => r.bar_type === 'BOTTOM');
+        const stirrupSpec = bmRebars.find(r => r.bar_type === 'STIRRUP');
 
         return (
           <group
             key={bm.id}
             position={[cx, beamY, cz]}
+            rotation={[0, angleY, 0]}
             onClick={(e) => { e.stopPropagation(); setSelectedElementId(isSelected ? null : bm.id); }}
           >
             {/* Concrete Beam Mesh (Ghost volume in steel_only mode) */}
             <mesh castShadow>
-              <boxGeometry args={[isHorizontalX ? bLength : bWidth, bDepth, isHorizontalX ? bWidth : bLength]} />
+              <boxGeometry args={[bLength, bDepth, bWidth]} />
               <meshStandardMaterial
                 color={isSelected ? '#2563eb' : isSteelOnly ? '#cbd5e1' : '#475569'}
                 transparent={isSteelOnly || isTransparent}
@@ -352,14 +382,30 @@ const BuildingMesh: React.FC<{ selectedElementId: string | null; setSelectedElem
               />
             </mesh>
 
-            {/* 3D Fe500 Beam Rebar Cage (Top/Bottom Main Bars + Stirrups) */}
+            {/* 3D Fe500 Beam Rebar Cage */}
             {(layers.rebars || isSteelOnly) && (
               <BeamRebarCage3D
                 length={bLength}
                 width={bWidth}
                 depth={bDepth}
-                isHorizontalX={isHorizontalX}
+                topCount={topSpec?.count || 2}
+                bottomCount={botSpec?.count || 3}
+                topDia={topSpec?.diameter_mm || 16}
+                botDia={botSpec?.diameter_mm || 16}
+                stirrupDia={stirrupSpec?.diameter_mm || 8}
+                stirrupSpacing={(stirrupSpec?.spacing_mm || 150) / 1000}
                 isSteelOnly={isSteelOnly}
+                selectedBarMark={selectedBarMark}
+                beamBarMarks={{
+                  topMark: topSpec?.bar_mark,
+                  bottomMark: botSpec?.bar_mark,
+                  stirrupMark: stirrupSpec?.bar_mark
+                }}
+                explodedOffset={explodedPercent / 100}
+                onSelectBarMark={(mark) => {
+                  setSelectedBarMark(mark);
+                  setSelectedStructuralId(mark);
+                }}
               />
             )}
           </group>
@@ -394,6 +440,12 @@ const BuildingMesh: React.FC<{ selectedElementId: string | null; setSelectedElem
                 length={ftL}
                 depth={ftD}
                 isSteelOnly={isSteelOnly}
+                selectedBarMark={selectedBarMark}
+                explodedOffset={explodedPercent / 100}
+                onSelectBarMark={(mark) => {
+                  setSelectedBarMark(mark);
+                  setSelectedStructuralId(mark);
+                }}
               />
             )}
           </group>

@@ -55,6 +55,12 @@ interface ProjectState {
   selectedStructuralId: string | null;
   setSelectedStructuralId: (id: string | null) => void;
 
+  selectedBarMark: string | null;
+  setSelectedBarMark: (mark: string | null) => void;
+
+  explodedPercent: number;
+  setExplodedPercent: (percent: number) => void;
+
   // Unit System
   unit: UnitType;
   setUnit: (u: UnitType) => void;
@@ -221,6 +227,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   selectedStructuralId: null,
   setSelectedStructuralId: (id) => set({ selectedStructuralId: id }),
+
+  selectedBarMark: null,
+  setSelectedBarMark: (mark) => set({ selectedBarMark: mark }),
+
+  explodedPercent: 0,
+  setExplodedPercent: (percent) => set({ explodedPercent: Math.max(0, Math.min(100, percent)) }),
 
   unit: 'feet',
   setUnit: (u) => set({ unit: u }),

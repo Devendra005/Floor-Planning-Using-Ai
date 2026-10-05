@@ -192,7 +192,9 @@ export interface StructuralFooting {
 
 export interface RebarSpec {
   element_id: string;
+  member_id?: string;
   member_type: 'COLUMN' | 'BEAM' | 'SLAB' | 'FOOTING' | 'STAIR';
+  floor?: number;
   bar_mark: string;
   bar_type: 'TOP' | 'BOTTOM' | 'STIRRUP' | 'LONGITUDINAL' | 'MAIN_MESH' | 'DISTRIBUTION';
   diameter_mm: number;
@@ -201,6 +203,10 @@ export interface RebarSpec {
   cover_mm: number;
   grade: string;
   shape_code: string;
+  zone?: string;
+  position?: string;
+  start_point?: [number, number, number];
+  end_point?: [number, number, number];
   individual_length_m: number;
   total_length_m: number;
   weight_kg: number;
@@ -231,6 +237,7 @@ export interface BarBendingScheduleItem {
   total_length_m: number;
   shape_code: string;
   weight_kg: number;
+  position?: string;
 }
 
 export interface QuantityTakeoffSummary {
