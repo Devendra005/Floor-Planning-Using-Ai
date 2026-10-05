@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { VisionUploadResult } from '../types';
+import { API_BASE_URL } from '../services/api';
 import {
   Upload, Scan, Layers, CheckCircle2, ShieldAlert, Sliders, ArrowRight, Eye, RefreshCw, Move, Ruler, Cpu, Zap
 } from 'lucide-react';
@@ -21,7 +22,7 @@ export const VisionImportPage: React.FC = () => {
     formData.append('unit', unit === 'feet' ? 'feet' : 'meter');
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/vision/analyze-floorplan', {
+      const res = await fetch(`${API_BASE_URL}/vision/analyze-floorplan`, {
         method: 'POST',
         body: formData
       });
