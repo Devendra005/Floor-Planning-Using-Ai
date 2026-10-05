@@ -34,6 +34,7 @@ class FloorPlanDB(Base):
     vastu_report_data = Column(JSON, nullable=False)
     structure_data = Column(JSON, nullable=False)
     plumbing_data = Column(JSON, nullable=True)
+    electrical_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     project = relationship("ProjectDB", back_populates="plans")

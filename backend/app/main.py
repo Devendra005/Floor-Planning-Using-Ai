@@ -4,7 +4,7 @@ from app.core.config import settings
 from app.core.database import Base, engine
 from app.api import (
     routes_projects, routes_generation, routes_vastu, routes_structure,
-    routes_export, routes_steel, routes_vision, routes_plumbing
+    routes_export, routes_steel, routes_vision, routes_plumbing, routes_electrical
 )
 
 # Initialize DB tables
@@ -32,6 +32,7 @@ app.include_router(routes_vastu.router, prefix=settings.API_V1_STR)
 app.include_router(routes_structure.router, prefix=settings.API_V1_STR)
 app.include_router(routes_steel.router, prefix=settings.API_V1_STR)
 app.include_router(routes_plumbing.router, prefix=settings.API_V1_STR)
+app.include_router(routes_electrical.router, prefix=settings.API_V1_STR)
 app.include_router(routes_vision.router, prefix=settings.API_V1_STR)
 app.include_router(routes_export.router, prefix=settings.API_V1_STR)
 

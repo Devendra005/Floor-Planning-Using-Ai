@@ -13,6 +13,7 @@ from app.services.geometry.constraint_solver import (
 from app.services.vastu.vastu_engine import VastuEngine
 from app.services.structure.structural_engine import StructuralEngine
 from app.services.plumbing.plumbing_engine import PlumbingEngine
+from app.services.electrical.electrical_engine import ElectricalEngine
 
 class GeneticLayoutSolver:
     def __init__(
@@ -34,6 +35,7 @@ class GeneticLayoutSolver:
         self.vastu_engine = VastuEngine()
         self.structural_engine = StructuralEngine()
         self.plumbing_engine = PlumbingEngine()
+        self.electrical_engine = ElectricalEngine()
 
         # Adjust weights according to Vastu mode if set
         vastu_mode = getattr(self.plot, 'vastu_mode', 'BALANCED')
@@ -397,6 +399,7 @@ class GeneticLayoutSolver:
 
             structure = self.structural_engine.generate_preliminary_structure(clean_rooms, self.plot)
             plumbing_report = self.plumbing_engine.analyze_layout_plumbing(clean_rooms, self.plot)
+            electrical_report = self.electrical_engine.generate_electrical_plan(clean_rooms, self.plot)
             plan_name = "Master Floor Plan — Vastu Compliant Layout" if idx == 0 else f"Layout Option {chr(65 + idx)}"
 
             candidates.append(
@@ -407,6 +410,7 @@ class GeneticLayoutSolver:
                     fitness_score=round(fit + (opt_summary.get("score_improvement", 0.0) * 0.35), 1),
                     vastu_score=round(detailed_report.total_score, 1),
                     plumbing_score=round(plumbing_report.total_score, 1),
+                    electrical_score=round(electrical_report.total_score, 1),
                     requirement_score=round(scores["requirements"], 1),
                     space_utilization_score=round(scores["space"], 1),
                     circulation_score=round(scores["circulation"], 1),
@@ -415,7 +419,8 @@ class GeneticLayoutSolver:
                     daylight_score=round(scores["daylight"], 1),
                     vastu_report=detailed_report,
                     structure=structure,
-                    plumbing=plumbing_report
+                    plumbing=plumbing_report,
+                    electrical=electrical_report
                 )
             )
 

@@ -129,6 +129,16 @@ export async function getLayoutStrategiesApi(): Promise<LayoutStrategyInfo[]> {
   }
 }
 
+export async function generateElectricalPlanApi(rooms: LayoutRoom[], plot: PlotConfig) {
+  const res = await fetch(`${API_BASE_URL}/electrical/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rooms, plot })
+  });
+  if (!res.ok) throw new Error('Electrical generation failed.');
+  return await res.json();
+}
+
 
 function generateFallbackProject(payload: any): Project {
   const plans = generateFallbackCandidates(payload.plot, payload.requirements);

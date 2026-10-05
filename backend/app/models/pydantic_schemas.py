@@ -69,18 +69,13 @@ class OptimizationWeights(BaseModel):
     space_utilization: float = 0.15
     circulation: float = 0.10
     adjacency: float = 0.10
-    structural_grid: float = 0.10
-    daylight: float = 0.05
+    structural_grid: float = Field(default=0.10, alias="structural_alignment")
+    daylight: float = Field(default=0.05, alias="daylight_ventilation")
 
-class ProjectCreate(BaseModel):
-    name: str
-    description: Optional[str] = ""
-    project_type: str = "Residential Single Family"
-    location: Optional[str] = ""
-    plot: PlotConfig
-    requirements: List[RoomRequirement]
-    vastu_profile: VastuProfileEnum = VastuProfileEnum.TRADITIONAL_BASIC
-    weights: OptimizationWeights = Field(default_factory=OptimizationWeights)
+    model_config = {
+        "populate_by_name": True
+    }
+
 
 class DoorPlacement(BaseModel):
     id: str
@@ -363,12 +358,49 @@ class PlumbingReportData(BaseModel):
         "without explicit verification and certification by a licensed plumbing engineer."
     )
 
+class ElectricalFixture(BaseModel):
+    id: str
+    room_id: str
+    room_name: str
+    fixture_type: str  # light, fan, switchboard, socket_6a, socket_16a, ac_point, tv_point, fridge_point, washing_machine_point, geyser_point, distribution_board
+    x: float
+    y: float
+    z: float = 1.2
+    wall_side: Optional[str] = None
+    mount_height_m: float = 1.2
+    power_rating_w: int = 100
+
+class ElectricalPanel(BaseModel):
+    id: str = "DB-MAIN"
+    x: float
+    y: float
+    z: float = 1.5
+    room_id: str
+    circuit_count: int = 8
+    total_load_kw: float = 12.5
+
+class ElectricalReportData(BaseModel):
+    total_score: float = 90.0
+    rating_label: str = "Optimal Electrical Distribution"
+    total_fixtures_count: int = 0
+    total_load_kw: float = 0.0
+    fixtures: List[ElectricalFixture] = Field(default_factory=list)
+    distribution_boards: List[ElectricalPanel] = Field(default_factory=list)
+    summary_by_type: Dict[str, int] = Field(default_factory=dict)
+    recommendations: List[str] = Field(default_factory=list)
+    disclaimer: str = (
+        "PRELIMINARY ELECTRICAL PLANNING ONLY: Electrical points, switchboard locations, "
+        "and distribution board placement are conceptual planning outputs and MUST NOT be used "
+        "for installation without explicit verification by a certified electrical engineer."
+    )
+
 class FloorPlanCandidate(BaseModel):
     id: str
     name: str
     fitness_score: float
     vastu_score: float
     plumbing_score: float = 85.0
+    electrical_score: float = 90.0
     requirement_score: float
     space_utilization_score: float
     circulation_score: float
@@ -379,6 +411,7 @@ class FloorPlanCandidate(BaseModel):
     vastu_report: VastuEvaluationReport
     structure: PreliminaryStructure = Field(default_factory=PreliminaryStructure)
     plumbing: PlumbingReportData = Field(default_factory=PlumbingReportData)
+    electrical: ElectricalReportData = Field(default_factory=ElectricalReportData)
     # Layout Diversity & Multi-Plan Generation fields
     layout_strategy: Optional[str] = "Central Corridor Layout"
     diversity_score: float = 90.0

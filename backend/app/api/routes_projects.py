@@ -58,9 +58,12 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
             name=plan.name,
             fitness_score=plan.fitness_score,
             vastu_score=plan.vastu_score,
+            plumbing_score=plan.plumbing_score or 85.0,
             rooms_data=[r.model_dump() for r in plan.rooms],
             vastu_report_data=plan.vastu_report.model_dump(),
-            structure_data=plan.structure.model_dump()
+            structure_data=plan.structure.model_dump(),
+            plumbing_data=plan.plumbing.model_dump() if plan.plumbing else None,
+            electrical_data=plan.electrical.model_dump() if plan.electrical else None
         )
         db.add(fp_db)
 
@@ -89,23 +92,28 @@ def list_projects(db: Session = Depends(get_db)):
     for p in projects:
         plans = []
         for fp in p.plans:
-            plans.append(
-                FloorPlanCandidate(
-                    id=fp.id,
-                    name=fp.name,
-                    rooms=fp.rooms_data,
-                    fitness_score=fp.fitness_score,
-                    vastu_score=fp.vastu_score,
-                    requirement_score=90.0,
-                    space_utilization_score=85.0,
-                    circulation_score=88.0,
-                    adjacency_score=85.0,
-                    structural_score=90.0,
-                    daylight_score=90.0,
-                    vastu_report=fp.vastu_report_data,
-                    structure=fp.structure_data
-                )
+            cand = FloorPlanCandidate(
+                id=fp.id,
+                name=fp.name,
+                rooms=fp.rooms_data,
+                fitness_score=fp.fitness_score,
+                vastu_score=fp.vastu_score,
+                plumbing_score=getattr(fp, 'plumbing_score', 85.0),
+                requirement_score=90.0,
+                space_utilization_score=85.0,
+                circulation_score=88.0,
+                adjacency_score=85.0,
+                structural_score=90.0,
+                daylight_score=90.0,
+                vastu_report=fp.vastu_report_data,
+                structure=fp.structure_data
             )
+            if fp.plumbing_data:
+                cand.plumbing = fp.plumbing_data
+            if fp.electrical_data:
+                cand.electrical = fp.electrical_data
+            plans.append(cand)
+
         results.append(
             ProjectResponse(
                 id=p.id,
@@ -132,23 +140,27 @@ def get_project(project_id: str, db: Session = Depends(get_db)):
 
     plans = []
     for fp in p.plans:
-        plans.append(
-            FloorPlanCandidate(
-                id=fp.id,
-                name=fp.name,
-                rooms=fp.rooms_data,
-                fitness_score=fp.fitness_score,
-                vastu_score=fp.vastu_score,
-                requirement_score=90.0,
-                space_utilization_score=85.0,
-                circulation_score=88.0,
-                adjacency_score=85.0,
-                structural_score=90.0,
-                daylight_score=90.0,
-                vastu_report=fp.vastu_report_data,
-                structure=fp.structure_data
-            )
+        cand = FloorPlanCandidate(
+            id=fp.id,
+            name=fp.name,
+            rooms=fp.rooms_data,
+            fitness_score=fp.fitness_score,
+            vastu_score=fp.vastu_score,
+            plumbing_score=getattr(fp, 'plumbing_score', 85.0),
+            requirement_score=90.0,
+            space_utilization_score=85.0,
+            circulation_score=88.0,
+            adjacency_score=85.0,
+            structural_score=90.0,
+            daylight_score=90.0,
+            vastu_report=fp.vastu_report_data,
+            structure=fp.structure_data
         )
+        if fp.plumbing_data:
+            cand.plumbing = fp.plumbing_data
+        if fp.electrical_data:
+            cand.electrical = fp.electrical_data
+        plans.append(cand)
 
     return ProjectResponse(
         id=p.id,

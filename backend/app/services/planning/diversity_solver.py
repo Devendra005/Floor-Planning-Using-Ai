@@ -18,6 +18,7 @@ from app.services.planning.diversity_engine import DiversityEngine
 from app.services.vastu.vastu_engine import VastuEngine
 from app.services.structure.structural_engine import StructuralEngine
 from app.services.plumbing.plumbing_engine import PlumbingEngine
+from app.services.electrical.electrical_engine import ElectricalEngine
 
 class LayoutDiversitySolver:
     """
@@ -45,6 +46,7 @@ class LayoutDiversitySolver:
         self.vastu_engine = VastuEngine()
         self.structural_engine = StructuralEngine()
         self.plumbing_engine = PlumbingEngine()
+        self.electrical_engine = ElectricalEngine()
 
         # Ensure mandatory Staircase is present
         has_stair = any(r.room_type in ['staircase', 'stair'] for r in self.requirements)
@@ -179,6 +181,7 @@ class LayoutDiversitySolver:
         vastu_rep = self.vastu_engine.evaluate_layout(clean_rooms, self.plot, self.vastu_profile)
         structure = self.structural_engine.generate_preliminary_structure(clean_rooms, self.plot)
         plumbing_rep = self.plumbing_engine.analyze_layout_plumbing(clean_rooms, self.plot)
+        electrical_rep = self.electrical_engine.generate_electrical_plan(clean_rooms, self.plot)
 
         # Furniture Validation
         furn_valid, furn_score, furn_details = FurnitureValidator.validate_layout_furniture(clean_rooms)
@@ -229,6 +232,7 @@ class LayoutDiversitySolver:
             fitness_score=round(fitness, 1),
             vastu_score=round(vastu_rep.total_score, 1),
             plumbing_score=round(plumbing_rep.total_score, 1),
+            electrical_score=round(electrical_rep.total_score, 1),
             requirement_score=100.0,
             space_utilization_score=space_score,
             circulation_score=circulation_score,
@@ -239,6 +243,7 @@ class LayoutDiversitySolver:
             vastu_report=vastu_rep,
             structure=structure,
             plumbing=plumbing_rep,
+            electrical=electrical_rep,
             layout_strategy=strategy_info["name"],
             diversity_score=92.0,
             plan_signature=sig_data["hash"],
