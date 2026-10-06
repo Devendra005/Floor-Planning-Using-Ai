@@ -1,5 +1,10 @@
 import os
+from pathlib import Path
 from typing import List
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 class Settings:
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "AI Vastu Planner")
@@ -25,4 +30,3 @@ class Settings:
         ]
 
 settings = Settings()
-

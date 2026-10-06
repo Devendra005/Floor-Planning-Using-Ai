@@ -43,8 +43,10 @@ cd "d:/Sem study/Final Year Project/Project/backend"
 ### Step 1.3: Install Python Dependencies
 ```bash
 pip install --upgrade pip
-pip install fastapi uvicorn opencv-python numpy pydantic sqlalchemy shapely pillow pytest python-multipart
+pip install -r requirements.txt
 ```
+
+To use PostgreSQL, copy `backend/.env.example` to `backend/.env` and replace `DATABASE_URL` with your provider's connection URL. The backend accepts a standard `postgresql://` URL and uses Psycopg 3. Leave your existing local `.env` on SQLite if you still want SQLite for local development.
 
 ### Step 1.4: Run Pytest Test Suite (Verification)
 ```bash
