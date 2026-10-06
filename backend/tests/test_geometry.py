@@ -1,14 +1,32 @@
 from app.services.geometry.constraint_solver import (
-    check_rect_overlap, check_within_boundary, get_zone_from_coordinate, get_81pad_mandala_cell
+    check_rect_overlap, check_within_boundary, get_zone_from_coordinate,
+    get_81pad_mandala_cell, validate_layout_geometry
 )
-from app.models.pydantic_schemas import OrientationEnum
+from app.models.pydantic_schemas import LayoutRoom, OrientationEnum, PlotConfig
 
 def test_rect_overlap():
     assert check_rect_overlap(0, 0, 4, 4, 2, 2, 4, 4) is True
     assert check_rect_overlap(0, 0, 4, 4, 5, 5, 4, 4) is False
 
+def test_rectangles_touching_boundaries_do_not_overlap():
+    assert check_rect_overlap(0, 0, 5, 4, 5, 0, 4, 4) is False
+    assert check_rect_overlap(0, 0, 5.1, 4, 5, 0, 4, 4) is True
+
+def test_same_footprint_on_different_floors_is_valid():
+    plot = PlotConfig(length=10, width=10)
+    rooms = [
+        LayoutRoom(id="living-ground", type="living", name="Living Ground", x=1, y=1, width=3, length=3, floor_level=0),
+        LayoutRoom(id="living-upper", type="living", name="Living Upper", x=1, y=1, width=3, length=3, floor_level=1),
+    ]
+
+    valid, errors = validate_layout_geometry(rooms, plot)
+
+    assert valid is True
+    assert errors == []
+
 def test_within_boundary():
     assert check_within_boundary(1, 1, 3, 3, 10, 10, 1, 1, 1, 1) is True
+    assert check_within_boundary(0.995, 1, 3, 3, 10, 10, 1, 1, 1, 1) is False
     assert check_within_boundary(0.5, 1, 3, 3, 10, 10, 1, 1, 1, 1) is False
 
 def test_zone_from_coordinate():

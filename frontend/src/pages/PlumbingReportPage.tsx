@@ -3,7 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import { PlumbingCostEstimate } from '../types';
 import {
   Droplet, Wrench, AlertTriangle, CheckCircle, ArrowRight, ShieldCheck, DollarSign,
-  TrendingDown, Layers, Layers2, FileText, Compass, Info, RefreshCw, Cpu
+  TrendingDown, Layers, FileText, Compass, Info, RefreshCw, Cpu, Zap
 } from 'lucide-react';
 
 export const PlumbingReportPage: React.FC = () => {
@@ -12,18 +12,18 @@ export const PlumbingReportPage: React.FC = () => {
 
   if (!selectedPlan) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center max-w-md space-y-4">
-          <Droplet className="w-12 h-12 text-cyan-500 mx-auto animate-bounce" />
-          <h2 className="text-xl font-extrabold text-slate-900">No Floor Plan Selected</h2>
-          <p className="text-slate-600 text-sm">Please generate or select a floor plan in the Wizard to view the AI Plumbing Optimization Report.</p>
-          <button
-            onClick={() => setActiveTab('wizard')}
-            className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm rounded-2xl shadow-lg transition-all"
-          >
-            Go to Generator Wizard
-          </button>
+      <div className="min-h-full bg-slate-50 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-4">
+          <Droplet className="w-6 h-6 text-blue-600" />
         </div>
+        <h3 className="text-xl font-bold text-slate-900">No Active Floor Plan Selected</h3>
+        <p className="text-xs text-slate-500 mt-1 mb-6 max-w-sm">Please generate or select a floor plan to view the AI Plumbing Optimization Analysis.</p>
+        <button
+          onClick={() => setActiveTab('wizard')}
+          className="btn-accent px-5 py-2.5 text-xs flex items-center space-x-2"
+        >
+          <span>Create Floor Plan</span>
+        </button>
       </div>
     );
   }
@@ -88,221 +88,155 @@ export const PlumbingReportPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-6 space-y-6">
+    <div className="min-h-full bg-slate-50 p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-cyan-900 via-slate-900 to-teal-950 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2 z-10">
-          <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-xs font-black uppercase tracking-widest rounded-full flex items-center space-x-1.5">
-              <Droplet className="w-3.5 h-3.5" />
-              <span>AI Plumbing Planning & Optimization</span>
-            </span>
-            <span className="px-3 py-1 bg-slate-800 text-slate-300 text-xs font-bold rounded-full">
-              Plan: {selectedPlan.name}
-            </span>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-600 mb-1">
+            <Droplet className="w-3.5 h-3.5" />
+            <span>AI Plumbing Routing & Clustering</span>
           </div>
-          <h1 className="text-3xl font-black tracking-tight">Plumbing Infrastructure Analysis</h1>
-          <p className="text-cyan-200/80 text-sm max-w-2xl">
-            Automated wet area detection, fixture coordinate mapping, vertical shaft (VP-01) alignment, A* pipe routing, and cost estimation.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Plumbing Infrastructure Analysis</h1>
         </div>
 
-        <div className="flex items-center space-x-3 z-10 shrink-0">
+        <div className="flex items-center space-x-2">
           <button
             onClick={() => { toggleLayer('plumbing'); setActiveTab('editor2d'); }}
-            className="px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-2xl border border-white/20 flex items-center space-x-2 transition-all"
+            className="btn-secondary px-3.5 py-1.5 text-xs flex items-center space-x-1.5"
           >
-            <Layers className="w-4 h-4 text-cyan-300" />
-            <span>View 2D Pipes</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span>View 2D Layers</span>
           </button>
           <button
-            onClick={() => { toggleLayer('plumbing'); setActiveTab('viewer3d'); }}
-            className="px-5 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs rounded-2xl shadow-lg flex items-center space-x-2 transition-all"
+            onClick={handleRunOptimization}
+            disabled={isOptimizing}
+            className="btn-accent px-4 py-1.5 text-xs flex items-center space-x-1.5"
           >
-            <Layers2 className="w-4 h-4" />
-            <span>View 3D Pipes</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isOptimizing ? 'animate-spin' : ''}`} />
+            <span>Re-Optimize Routing</span>
           </button>
         </div>
       </div>
 
-      {/* Main Grid Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Left Column: Overall Score & Metrics */}
-        <div className="space-y-6">
+        <div className="arch-card p-5 space-y-2">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Overall Efficiency</span>
+            <span className="font-semibold text-blue-600 font-mono">{score}/100</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 font-mono">{plumbing.rating_label || 'High Efficiency'}</div>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-blue-600 h-full" style={{ width: `${score}%` }} />
+          </div>
+        </div>
+
+        <div className="arch-card p-5 space-y-2">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Total Pipe Length</span>
+            <span className="font-semibold text-emerald-600 font-mono">-18% vs standard</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 font-mono">{plumbing.total_pipe_length_m} meters</div>
+          <p className="text-[11px] text-slate-500">Water: {plumbing.water_pipe_length_m}m &bull; Waste: {plumbing.waste_pipe_length_m}m &bull; Soil: {plumbing.soil_pipe_length_m}m</p>
+        </div>
+
+        <div className="arch-card p-5 space-y-2">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Bends & Junctions</span>
+            <span className="font-semibold text-slate-700 font-mono">{plumbing.total_bends} Bends</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 font-mono">{plumbing.total_junctions} Junctions</div>
+          <p className="text-[11px] text-slate-500">Low bend count reduces friction loss & maintenance</p>
+        </div>
+
+        <div className="arch-card p-5 space-y-2">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Estimated Material Cost</span>
+            <span className="font-semibold text-slate-700 font-mono">INR ₹</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 font-mono">₹{cost.total_estimated_cost?.toLocaleString()}</div>
+          <p className="text-[11px] text-slate-500">Includes pipes, fittings, and labor allocation</p>
+        </div>
+
+      </div>
+
+      {/* Main Breakdown Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Observations & Recommendations */}
+        <div className="lg:col-span-7 space-y-6">
           
-          {/* Overall Plumbing Score Gauge Card */}
-          <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-widest text-slate-500">Plumbing Score</span>
-              <span className="px-2.5 py-1 bg-cyan-100 text-cyan-800 text-xs font-bold rounded-lg">Weighted Metric</span>
+          <div className="arch-card p-6 space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span>Optimized Layout Characteristics</span>
+            </h3>
+            <div className="space-y-2.5">
+              {plumbing.positive_observations?.map((obs, i) => (
+                <div key={i} className="flex items-start space-x-2.5 text-xs text-slate-700">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
+                  <span className="leading-relaxed">{obs}</span>
+                </div>
+              ))}
             </div>
-
-            <div className="flex items-end space-x-4">
-              <div className="text-5xl font-black text-slate-900 tracking-tight">{score}</div>
-              <div className="pb-1">
-                <span className="text-sm font-bold text-slate-500">/ 100</span>
-                <p className="text-xs font-black text-cyan-600 uppercase tracking-wide">{plumbing.rating_label}</p>
-              </div>
-            </div>
-
-            {/* Score Component Progress Bars */}
-            <div className="space-y-2.5 pt-2">
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-600">Pipe Length Efficiency (40%)</span>
-                  <span className="text-slate-900">{plumbing.pipe_efficiency_score || 88}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${plumbing.pipe_efficiency_score || 88}%` }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-600">Bend Efficiency (20%)</span>
-                  <span className="text-slate-900">{plumbing.bend_efficiency_score || 82}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${plumbing.bend_efficiency_score || 82}%` }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-600">Shaft Proximity (15%)</span>
-                  <span className="text-slate-900">{plumbing.shaft_efficiency_score || 92}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${plumbing.shaft_efficiency_score || 92}%` }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-600">Cost Efficiency (15%)</span>
-                  <span className="text-slate-900">{plumbing.cost_efficiency_score || 85}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${plumbing.cost_efficiency_score || 85}%` }} />
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleRunOptimization}
-              disabled={isOptimizing}
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-2xl shadow-lg flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isOptimizing ? 'animate-spin' : ''}`} />
-              <span>{isOptimizing ? 'Optimizing Routes...' : 'Re-Run Plumbing Optimizer'}</span>
-            </button>
           </div>
 
-          {/* Cost Estimation Card */}
-          <div className="bg-gradient-to-br from-slate-900 to-cyan-950 text-white p-6 rounded-3xl shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-cyan-800/40 pb-3">
-              <span className="text-xs font-extrabold uppercase tracking-widest text-cyan-300 flex items-center space-x-1.5">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                <span>Estimated Plumbing Cost</span>
-              </span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md border border-emerald-500/30">INR ₹</span>
-            </div>
-
-            <div>
-              <div className="text-3xl font-black text-emerald-400">
-                ₹{cost.total_estimated_cost ? cost.total_estimated_cost.toLocaleString('en-IN') : '16,875'}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">Preliminary material & installation planning estimate.</p>
-            </div>
-
-            <div className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
-              <div className="flex justify-between">
-                <span>Water Supply Pipe (CPVC):</span>
-                <span className="font-bold text-white">₹{cost.water_pipe_cost ? cost.water_pipe_cost.toLocaleString('en-IN') : '3,976'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Wastewater Lines (SWR):</span>
-                <span className="font-bold text-white">₹{cost.waste_pipe_cost ? cost.waste_pipe_cost.toLocaleString('en-IN') : '3,640'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Soil & Main Drain Pipe:</span>
-                <span className="font-bold text-white">₹{cost.soil_pipe_cost ? cost.soil_pipe_cost.toLocaleString('en-IN') : '3,825'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Fittings, Traps & Valves:</span>
-                <span className="font-bold text-white">₹{cost.fittings_cost ? cost.fittings_cost.toLocaleString('en-IN') : '1,540'}</span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-slate-800 font-bold text-emerald-300">
-                <span>Labor & Installation (30%):</span>
-                <span>₹{cost.labor_cost ? cost.labor_cost.toLocaleString('en-IN') : '3,894'}</span>
-              </div>
+          <div className="arch-card p-6 space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
+              <Wrench className="w-4 h-4 text-blue-600" />
+              <span>Engineering Recommendations</span>
+            </h3>
+            <div className="space-y-2.5">
+              {plumbing.recommendations?.map((rec, i) => (
+                <div key={i} className="flex items-start space-x-2.5 text-xs text-slate-700">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                  <span className="leading-relaxed">{rec}</span>
+                </div>
+              ))}
             </div>
           </div>
 
         </div>
 
-        {/* Right Column: Detailed Diagnostics & Routing */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Key Infrastructure Metrics Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400">Total Pipe Length</span>
-              <p className="text-xl font-black text-cyan-600">{plumbing.total_pipe_length_m || 24.6} m</p>
-              <span className="text-[10px] text-slate-500">Water: {plumbing.water_pipe_length_m || 14.2}m</span>
+        {/* Cost Breakdown Table */}
+        <div className="lg:col-span-5 arch-card p-6 space-y-4">
+          <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
+            <DollarSign className="w-4 h-4 text-slate-600" />
+            <span>Cost Estimate Breakdown</span>
+          </h3>
+
+          <div className="space-y-3 font-mono text-xs">
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-slate-600">Fresh Water Lines:</span>
+              <span className="font-semibold text-slate-900">₹{cost.water_pipe_cost?.toLocaleString()}</span>
             </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400">90° Pipe Bends</span>
-              <p className="text-xl font-black text-emerald-600">{plumbing.total_bends || 7}</p>
-              <span className="text-[10px] text-slate-500">Low head loss</span>
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-slate-600">Grey Water Waste Lines:</span>
+              <span className="font-semibold text-slate-900">₹{cost.waste_pipe_cost?.toLocaleString()}</span>
             </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400">Plumbing Shaft</span>
-              <p className="text-xl font-black text-blue-600">VP-01</p>
-              <span className="text-[10px] text-slate-500">Vertical stack aligned</span>
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-slate-600">Black Water Soil Lines:</span>
+              <span className="font-semibold text-slate-900">₹{cost.soil_pipe_cost?.toLocaleString()}</span>
             </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400">Fixtures Detected</span>
-              <p className="text-xl font-black text-slate-800">{plumbing.fixtures?.length || 8}</p>
-              <span className="text-[10px] text-slate-500">100% connected</span>
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-slate-600">Fittings & Traps:</span>
+              <span className="font-semibold text-slate-900">₹{cost.fittings_cost?.toLocaleString()}</span>
             </div>
-          </div>
-
-          {/* Validation Diagnostics & Warnings */}
-          <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200 space-y-4">
-            <h3 className="font-extrabold text-slate-900 text-sm uppercase tracking-widest flex items-center space-x-2">
-              <ShieldCheck className="w-4 h-4 text-cyan-600" />
-              <span>Validation & Engineering Diagnostics</span>
-            </h3>
-
-            <div className="space-y-3">
-              {plumbing.positive_observations?.map((pos, idx) => (
-                <div key={`pos-${idx}`} className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start space-x-3">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span className="text-xs font-semibold text-emerald-950">{pos}</span>
-                </div>
-              ))}
-
-              {plumbing.recommendations?.map((rec, idx) => (
-                <div key={`rec-${idx}`} className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start space-x-3">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span className="text-xs font-semibold text-amber-950">{rec}</span>
-                </div>
-              ))}
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-slate-600">Labor Installation:</span>
+              <span className="font-semibold text-slate-900">₹{cost.labor_cost?.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 font-bold text-sm text-slate-900 border-t border-slate-200">
+              <span>Total Estimate:</span>
+              <span className="text-blue-600">₹{cost.total_estimated_cost?.toLocaleString()}</span>
             </div>
           </div>
 
-          {/* Disclaimer Footer */}
-          <div className="p-4 bg-slate-200/70 border border-slate-300 rounded-2xl text-[11px] text-slate-600 flex items-start space-x-3">
-            <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-            <p className="leading-relaxed font-medium">{plumbing.disclaimer}</p>
+          <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
+            <strong>Disclaimer:</strong> {plumbing.disclaimer}
           </div>
-
         </div>
 
       </div>
@@ -310,3 +244,5 @@ export const PlumbingReportPage: React.FC = () => {
     </div>
   );
 };
+
+

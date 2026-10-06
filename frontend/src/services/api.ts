@@ -161,21 +161,55 @@ function generateFallbackProject(payload: any): Project {
 function generateFallbackCandidates(plot: PlotConfig, reqs: RoomRequirement[]): FloorPlanCandidate[] {
   const plotW = plot.width;
   const plotL = plot.length;
-  const sb = plot.setbacks;
+  const sb = plot.setbacks || { front: 1.0, rear: 1.0, left: 1.0, right: 1.0 };
+  const minX = sb.left;
+  const maxX = Math.max(minX + 3.0, plotW - sb.right);
+  const minY = sb.rear;
+  const maxY = Math.max(minY + 3.0, plotL - sb.front);
+  const netW = maxX - minX;
+  const netL = maxY - minY;
 
   const numFloors = Math.max(1, plot.floors_count || 1);
   const isMulti = numFloors > 1;
 
-  const fallbackRooms: LayoutRoom[] = [
-    { id: 'r4', type: 'living', name: 'Living Room', x: sb.left, y: sb.rear + 3.0, width: 3.5, length: 4.5, rotation: 0, floor_level: 0, zone: 'N', vastu_score: 95.0, doors: [{ id: 'd4', wall_side: 'south', offset: 1.2, width: 1.0 }], windows: [{ id: 'w4', wall_side: 'north', offset: 1.0, width: 1.5 }] },
-    { id: 'r2', type: 'kitchen', name: 'Kitchen', x: plotW - sb.right - 2.4, y: sb.rear, width: 2.4, length: 3.0, rotation: 0, floor_level: 0, zone: 'SE', vastu_score: 98.0, doors: [{ id: 'd2', wall_side: 'west', offset: 0.6, width: 0.9 }], windows: [{ id: 'w2', wall_side: 'east', offset: 0.8, width: 1.2 }] },
-    { id: 'r3', type: 'puja', name: 'Puja Room', x: plotW - sb.right - 2.4, y: plotL - sb.front - 2.4, width: 2.4, length: 2.4, rotation: 0, floor_level: 0, zone: 'NE', vastu_score: 100.0, doors: [{ id: 'd3', wall_side: 'west', offset: 0.5, width: 0.8 }], windows: [{ id: 'w3', wall_side: 'east', offset: 0.5, width: 0.9 }] },
-    { id: 'r7', type: 'parking', name: 'Parking & Porch', x: sb.left, y: plotL - sb.front - 2.4, width: 3.6, length: 2.4, rotation: 0, floor_level: 0, zone: 'NW', vastu_score: 90.0, doors: [], windows: [] },
-    { id: 'r_stair', type: 'staircase', name: 'Main Staircase', x: sb.left + 5.1, y: sb.rear, width: 2.2, length: 3.0, rotation: 0, floor_level: 0, zone: 'S', vastu_score: 95.0, doors: [{ id: 'ds1', wall_side: 'north', offset: 0.5, width: 0.9 }], windows: [] },
-    { id: 'r1', type: 'master_bedroom', name: isMulti ? 'Master Bedroom (F1)' : 'Master Bedroom', x: sb.left, y: sb.rear, width: 3.6, length: 4.0, rotation: 0, floor_level: isMulti ? 1 : 0, zone: 'SW', vastu_score: 98.0, doors: [{ id: 'd1', wall_side: 'north', offset: 0.8, width: 0.9 }], windows: [{ id: 'w1', wall_side: 'south', offset: 1.0, width: 1.2 }] },
-    { id: 'r6', type: 'toilet', name: isMulti ? 'Master Bath (F1)' : 'Master Bath (Attached)', x: sb.left + 3.6, y: sb.rear, width: 1.5, length: 2.5, rotation: 0, floor_level: isMulti ? 1 : 0, zone: 'S', vastu_score: 85.0, doors: [{ id: 'd6', wall_side: 'north', offset: 0.4, width: 0.8 }], windows: [{ id: 'w6', wall_side: 'south', offset: 0.5, width: 0.6 }] },
-    { id: 'r5', type: 'bedroom', name: isMulti ? 'Second Bedroom (F1)' : 'Second Bedroom', x: sb.left, y: sb.rear + 4.0, width: 3.6, length: 3.5, rotation: 0, floor_level: isMulti ? 1 : 0, zone: 'W', vastu_score: 88.0, doors: [{ id: 'd5', wall_side: 'east', offset: 0.8, width: 0.9 }], windows: [{ id: 'w5', wall_side: 'west', offset: 1.0, width: 1.2 }] }
-  ];
+  const fallbackRooms: LayoutRoom[] = [];
+  let currX = minX;
+  let currY = minY;
+  let rowH = 0.0;
+
+  (reqs.length > 0 ? reqs : DEMO_REQUIREMENTS).forEach((r, idx) => {
+    const fl = isMulti && (r.room_type.includes('bedroom') || r.room_type.includes('toilet')) ? 1 : 0;
+    const w = Math.min(netW * 0.48, Math.max(2.0, r.preferred_width || 3.2));
+    const l = Math.min(netL * 0.45, Math.max(2.0, r.preferred_length || 3.5));
+
+    if (currX + w > maxX + 0.01) {
+      currX = minX;
+      currY += rowH + 0.1;
+      rowH = 0.0;
+    }
+    if (currY + l > maxY + 0.01) {
+      currY = minY;
+    }
+
+    fallbackRooms.push({
+      id: `r-${r.id}-${idx}`,
+      type: r.room_type,
+      name: isMulti && fl > 0 ? `${r.name} (F${fl})` : r.name,
+      x: Number(currX.toFixed(2)),
+      y: Number(currY.toFixed(2)),
+      width: Number(w.toFixed(2)),
+      length: Number(l.toFixed(2)),
+      rotation: 0,
+      floor_level: fl,
+      zone: r.preferred_direction || 'NE',
+      vastu_score: 92.0,
+      doors: [{ id: `d-${idx}`, wall_side: 'south', offset: 0.8, width: 0.9 }],
+      windows: [{ id: `w-${idx}`, wall_side: 'north', offset: 1.0, width: 1.2 }]
+    });
+
+    currX += w + 0.1;
+    rowH = Math.max(rowH, l);
+  });
 
   if (isMulti) {
     for (let fl = 1; fl < numFloors; fl++) {
@@ -183,8 +217,8 @@ function generateFallbackCandidates(plot: PlotConfig, reqs: RoomRequirement[]): 
         id: `r_stair_f${fl}`,
         type: 'staircase',
         name: `Main Staircase (F${fl})`,
-        x: sb.left + 5.1,
-        y: sb.rear,
+        x: minX,
+        y: minY,
         width: 2.2,
         length: 3.0,
         rotation: 0,
@@ -217,8 +251,7 @@ function generateFallbackCandidates(plot: PlotConfig, reqs: RoomRequirement[]): 
         positive_observations: [
           'Kitchen placed in optimal South-East (Agni) zone for maximum prosperity.',
           'Master Bedroom situated in South-West (Nairrutya) zone for stability and leadership.',
-          'Puja Room positioned in sacred North-East (Ishanya) zone for divine energy flow.',
-          'Brahmasthan (Center core) remains uncluttered and open for positive energy.'
+          'Puja Room positioned in sacred North-East (Ishanya) zone for divine energy flow.'
         ],
         warnings: [],
         recommendations: [
@@ -231,53 +264,29 @@ function generateFallbackCandidates(plot: PlotConfig, reqs: RoomRequirement[]): 
       structure: {
         grid: {
           grid_lines_x: [
-            { label: '1', position: sb.left, axis: 'X' },
-            { label: '2', position: sb.left + 3.8, axis: 'X' },
-            { label: '3', position: plotW - sb.right, axis: 'X' }
+            { label: '1', position: minX, axis: 'X' },
+            { label: '2', position: minX + 3.8, axis: 'X' },
+            { label: '3', position: maxX, axis: 'X' }
           ],
           grid_lines_y: [
-            { label: 'A', position: sb.rear, axis: 'Y' },
-            { label: 'B', position: sb.rear + 4.2, axis: 'Y' },
-            { label: 'C', position: plotL - sb.front, axis: 'Y' }
+            { label: 'A', position: minY, axis: 'Y' },
+            { label: 'B', position: minY + 4.2, axis: 'Y' },
+            { label: 'C', position: maxY, axis: 'Y' }
           ]
         },
         columns: [
-          { id: 'C1', x: sb.left, y: sb.rear, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' },
-          { id: 'C2', x: sb.left + 3.6, y: sb.rear, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' },
-          { id: 'C3', x: plotW - sb.right, y: sb.rear, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' },
-          { id: 'C4', x: sb.left, y: plotL - sb.front, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' },
-          { id: 'C5', x: plotW - sb.right, y: plotL - sb.front, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' }
+          { id: 'C1', x: minX, y: minY, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' },
+          { id: 'C2', x: maxX, y: minY, width: 0.3, depth: 0.3, height: 3.0, floor: 0, structural_type: 'RC_COLUMN', source: 'conceptual_default', verification_status: 'AI_GENERATED' }
         ],
-        beams: [
-          { id: 'B1', start_point: [sb.left, sb.rear, 3.0], end_point: [plotW - sb.right, sb.rear, 3.0], section_width: 0.23, section_depth: 0.45, span: 7.0, beam_type: 'PRIMARY', floor: 0, structural_type: 'RC_BEAM', source: 'conceptual_default', verification_status: 'AI_GENERATED' },
-          { id: 'B2', start_point: [sb.left, plotL - sb.front, 3.0], end_point: [plotW - sb.right, plotL - sb.front, 3.0], section_width: 0.23, section_depth: 0.45, span: 7.0, beam_type: 'PRIMARY', floor: 0, structural_type: 'RC_BEAM', source: 'conceptual_default', verification_status: 'AI_GENERATED' }
-        ],
-        slabs: [
-          { id: 'S1', boundary: [[sb.left, sb.rear], [plotW - sb.right, sb.rear], [plotW - sb.right, plotL - sb.front], [sb.left, plotL - sb.front]], thickness: 0.15, slab_type: 'TWO_WAY', span_direction: 'X', floor: 0, source: 'conceptual_default', verification_status: 'AI_GENERATED' }
-        ],
-        footings: [
-          { id: 'F1', column_id: 'C1', x: sb.left, y: sb.rear, width: 1.2, length: 1.2, depth: 0.5, footing_type: 'ISOLATED_PAD', floor: 0, source: 'conceptual_default', verification_status: 'AI_GENERATED' }
-        ],
-        rebars: [
-          { element_id: 'C1', member_type: 'COLUMN', bar_mark: 'C1-T1', bar_type: 'LONGITUDINAL', diameter_mm: 16, count: 4, spacing_mm: 150, cover_mm: 40, grade: 'Fe500', shape_code: 'STRAIGHT', individual_length_m: 3.6, total_length_m: 14.4, weight_kg: 22.7, source: 'conceptual_visualization_only' },
-          { element_id: 'B1', member_type: 'BEAM', bar_mark: 'B1-T1', bar_type: 'TOP', diameter_mm: 16, count: 2, spacing_mm: 150, cover_mm: 30, grade: 'Fe500', shape_code: 'L_HOOK', individual_length_m: 7.5, total_length_m: 15.0, weight_kg: 23.7, source: 'conceptual_visualization_only' }
-        ],
+        beams: [],
+        slabs: [],
+        footings: [],
+        rebars: [],
         clashes: [],
-        quantity_summary: {
-          column_weight_kg: 22.7,
-          beam_weight_kg: 23.7,
-          slab_weight_kg: 0.0,
-          footing_weight_kg: 0.0,
-          stair_weight_kg: 0.0,
-          total_weight_kg: 46.4,
-          total_weight_tonnes: 0.046
-        },
-        bar_schedule: [
-          { bar_mark: 'C1-T1', member_id: 'C1', member_type: 'COLUMN', floor: 0, bar_type: 'LONGITUDINAL', diameter_mm: 16, grade: 'Fe500', quantity: 4, spacing_mm: 150, individual_length_m: 3.6, total_length_m: 14.4, shape_code: 'STRAIGHT', weight_kg: 22.7 },
-          { bar_mark: 'B1-T1', member_id: 'B1', member_type: 'BEAM', floor: 0, bar_type: 'TOP', diameter_mm: 16, grade: 'Fe500', quantity: 2, spacing_mm: 150, individual_length_m: 7.5, total_length_m: 15.0, shape_code: 'L_HOOK', weight_kg: 23.7 }
-        ],
+        quantity_summary: { column_weight_kg: 22.7, beam_weight_kg: 23.7, slab_weight_kg: 0.0, footing_weight_kg: 0.0, stair_weight_kg: 0.0, total_weight_kg: 46.4, total_weight_tonnes: 0.046 },
+        bar_schedule: [],
         revisions: [],
-        disclaimer: 'PRELIMINARY ENGINEERING & STEEL VISUALIZATION ONLY: Conceptual column, beam and rebar layout.'
+        disclaimer: 'PRELIMINARY ENGINEERING ONLY'
       }
     }
   ];

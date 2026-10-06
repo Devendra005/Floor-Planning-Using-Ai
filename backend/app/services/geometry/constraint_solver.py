@@ -4,28 +4,28 @@ from app.models.pydantic_schemas import LayoutRoom, PlotConfig, OrientationEnum
 
 # Room-specific minimum dimensional requirements (meters & sq.m)
 ROOM_MIN_SPEC = {
-    "master_bedroom": {"min_w": 3.0, "min_l": 3.6, "min_area": 10.8},
-    "bedroom": {"min_w": 3.0, "min_l": 3.0, "min_area": 9.0},
-    "kitchen": {"min_w": 2.4, "min_l": 2.7, "min_area": 6.48},
-    "living": {"min_w": 3.6, "min_l": 4.2, "min_area": 15.12},
-    "dining": {"min_w": 2.7, "min_l": 3.0, "min_area": 8.1},
-    "puja": {"min_w": 1.8, "min_l": 1.8, "min_area": 3.24},
-    "toilet": {"min_w": 1.5, "min_l": 2.1, "min_area": 3.15},
-    "parking": {"min_w": 3.0, "min_l": 4.5, "min_area": 13.5},
-    "staircase": {"min_w": 2.0, "min_l": 3.0, "min_area": 6.0}
+    "master_bedroom": {"min_w": 2.5, "min_l": 2.5, "min_area": 6.25},
+    "bedroom": {"min_w": 2.4, "min_l": 2.4, "min_area": 5.76},
+    "kitchen": {"min_w": 2.0, "min_l": 2.0, "min_area": 4.0},
+    "living": {"min_w": 2.5, "min_l": 2.5, "min_area": 6.25},
+    "dining": {"min_w": 2.2, "min_l": 2.2, "min_area": 4.84},
+    "puja": {"min_w": 1.5, "min_l": 1.5, "min_area": 2.25},
+    "toilet": {"min_w": 1.2, "min_l": 1.5, "min_area": 1.8},
+    "parking": {"min_w": 2.4, "min_l": 2.4, "min_area": 5.76},
+    "staircase": {"min_w": 1.8, "min_l": 2.4, "min_area": 4.32}
 }
 
 def check_rect_overlap(
     x1: float, y1: float, w1: float, l1: float,
-    x2: float, y2: float, w2: float, l2: float,
-    eps: float = 0.05
+    x2: float, y2: float, w2: float, l2: float
 ) -> bool:
-    """Returns True if rectangle 1 overlaps with rectangle 2 (excluding border touching within eps)."""
-    if x1 + w1 - eps <= x2 or x2 + w2 - eps <= x1:
-        return False
-    if y1 + l1 - eps <= y2 or y2 + l2 - eps <= y1:
-        return False
-    return True
+    """Returns True only when the rectangles have a positive-area intersection."""
+    return (
+        x1 < x2 + w2
+        and x1 + w1 > x2
+        and y1 < y2 + l2
+        and y1 + l1 > y2
+    )
 
 def check_within_boundary(
     x: float, y: float, w: float, l: float,
@@ -43,9 +43,9 @@ def check_within_boundary(
     min_y = setback_rear
     max_y = plot_l - setback_front
 
-    if x < min_x - 0.01 or (x + w) > max_x + 0.01:
+    if x < min_x or (x + w) > max_x:
         return False
-    if y < min_y - 0.01 or (y + l) > max_y + 0.01:
+    if y < min_y or (y + l) > max_y:
         return False
     return True
 
@@ -117,33 +117,51 @@ def calculate_room_adjacencies(rooms: List[LayoutRoom]) -> Dict[str, List[str]]:
     for i in range(len(rooms)):
         for j in range(i + 1, len(rooms)):
             r1, r2 = rooms[i], rooms[j]
+            fl1 = r1.floor_level if r1.floor_level is not None else 0
+            fl2 = r2.floor_level if r2.floor_level is not None else 0
+            if fl1 != fl2:
+                continue
+
             h_overlap = max(0, min(r1.x + r1.width, r2.x + r2.width) - max(r1.x, r2.x))
             v_overlap = max(0, min(r1.y + r1.length, r2.y + r2.length) - max(r1.y, r2.y))
 
-            if (abs(r1.x + r1.width - r2.x) < 0.15 or abs(r2.x + r2.width - r1.x) < 0.15) and v_overlap > 0.4:
+            if (r1.x + r1.width == r2.x or r2.x + r2.width == r1.x) and v_overlap > 0.4:
                 adjacencies[r1.id].append(r2.id)
                 adjacencies[r2.id].append(r1.id)
-            elif (abs(r1.y + r1.length - r2.y) < 0.15 or abs(r2.y + r2.length - r1.y) < 0.15) and h_overlap > 0.4:
+            elif (r1.y + r1.length == r2.y or r2.y + r2.length == r1.y) and h_overlap > 0.4:
                 adjacencies[r1.id].append(r2.id)
                 adjacencies[r2.id].append(r1.id)
 
     return adjacencies
 
 def validate_room_connectivity(rooms: List[LayoutRoom]) -> bool:
-    """Verifies all rooms are connected in an adjacency graph."""
+    """Verifies rooms are connected within each floor's adjacency graph."""
     if not rooms:
         return True
-    adj = calculate_room_adjacencies(rooms)
-    visited = set()
-    stack = [rooms[0].id]
 
-    while stack:
-        curr = stack.pop()
-        if curr not in visited:
-            visited.add(curr)
-            stack.extend([neighbor for neighbor in adj.get(curr, []) if neighbor not in visited])
+    floor_groups: Dict[int, List[LayoutRoom]] = {}
+    for room in rooms:
+        floor = room.floor_level if room.floor_level is not None else 0
+        floor_groups.setdefault(floor, []).append(room)
 
-    return len(visited) == len(rooms)
+    for floor_rooms in floor_groups.values():
+        adj = calculate_room_adjacencies(floor_rooms)
+        visited = set()
+        stack = [floor_rooms[0].id]
+
+        while stack:
+            curr = stack.pop()
+            if curr not in visited:
+                visited.add(curr)
+                stack.extend(
+                    neighbor for neighbor in adj.get(curr, [])
+                    if neighbor not in visited
+                )
+
+        if len(visited) != len(floor_rooms):
+            return False
+
+    return True
 
 def validate_layout_geometry(
     rooms: List[LayoutRoom], plot: PlotConfig
@@ -159,12 +177,14 @@ def validate_layout_geometry(
     plot_w, plot_l = plot.width, plot.length
     sb = plot.setbacks
 
-    # 1. Overlap check
+    # 1. Overlap check per floor level
     for i in range(len(rooms)):
         for j in range(i + 1, len(rooms)):
             r1, r2 = rooms[i], rooms[j]
-            if check_rect_overlap(r1.x, r1.y, r1.width, r1.length, r2.x, r2.y, r2.width, r2.length):
-                errors.append(f"INVALID LAYOUT: Room '{r1.name}' overlaps with '{r2.name}'.")
+            fl1 = r1.floor_level if r1.floor_level is not None else 0
+            fl2 = r2.floor_level if r2.floor_level is not None else 0
+            if fl1 == fl2 and check_rect_overlap(r1.x, r1.y, r1.width, r1.length, r2.x, r2.y, r2.width, r2.length):
+                errors.append(f"INVALID LAYOUT: Room '{r1.name}' overlaps with '{r2.name}' on Floor {fl1}.")
 
     # 2. Boundary check
     for r in rooms:
@@ -173,8 +193,18 @@ def validate_layout_geometry(
 
     # 3. Room-specific minimum dimension check
     for r in rooms:
-        spec = ROOM_MIN_SPEC.get(r.type.lower(), {"min_w": 1.8, "min_l": 1.8, "min_area": 3.24})
-        if r.width < spec["min_w"] - 0.05 or r.length < spec["min_l"] - 0.05:
+        room_type = r.type.lower()
+        if room_type == "stair":
+            room_type = "staircase"
+        spec = ROOM_MIN_SPEC.get(room_type, {"min_w": 1.5, "min_l": 1.5, "min_area": 2.25})
+        if not all(math.isfinite(value) for value in (r.x, r.y, r.width, r.length)):
+            errors.append(f"INVALID LAYOUT: Room '{r.name}' has non-finite geometry.")
+        elif (
+            r.width < spec["min_w"] - 0.05
+            or r.length < spec["min_l"] - 0.05
+            or r.width <= 0
+            or r.length <= 0
+        ):
             errors.append(f"INVALID LAYOUT: Room '{r.name}' ({r.width:.1f}m x {r.length:.1f}m) below minimum allowable dimensions for {r.type}.")
 
     # 4. Room connectivity check

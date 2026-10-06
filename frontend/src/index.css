@@ -1,164 +1,185 @@
 @import "tailwindcss";
 
-body {
-  @apply bg-white text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
+@layer base {
+  :root {
+    --bg-main: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-inset: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border-subtle: #e2e8f0;
+    --border-light: #f1f5f9;
+    --accent-blue: #2563eb;
+    --accent-blue-hover: #1d4ed8;
+    --accent-blue-light: #eff6ff;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--accent-blue);
+    color: #ffffff;
+  }
 }
 
-/* Custom light scrollbars */
+/* Custom minimal scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* Architectural grid pattern background with light crisp motion */
-.bg-architectural-grid {
-  background-size: 28px 28px;
+/* Architectural subtle background grid pattern */
+.bg-arch-grid {
+  background-size: 24px 24px;
   background-image: 
-    linear-gradient(to right, rgba(203, 213, 225, 0.4) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(203, 213, 225, 0.4) 1px, transparent 1px);
+    linear-gradient(to right, rgba(226, 232, 240, 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.5) 1px, transparent 1px);
 }
 
-.bg-animated-grid {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(226, 232, 240, 0.8) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(226, 232, 240, 0.8) 1px, transparent 1px);
-  animation: gridMove 20s linear infinite;
+.bg-arch-dots {
+  background-size: 20px 20px;
+  background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
 }
 
-@keyframes gridMove {
-  0% { background-position: 0 0; }
-  100% { background-position: 32px 32px; }
-}
-
-/* Aurora light mesh background */
-.bg-aurora-mesh {
-  background: radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.08) 0%, transparent 45%),
-              radial-gradient(circle at 85% 20%, rgba(14, 165, 233, 0.08) 0%, transparent 45%),
-              radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
-              radial-gradient(circle at 80% 85%, rgba(168, 85, 247, 0.06) 0%, transparent 45%);
-}
-
-/* Glassmorphism Cards & Panels for White Theme */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-panel-glow {
+/* Minimal Architectural UI Cards */
+.arch-card {
   background: #ffffff;
-  backdrop-filter: blur(20px);
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease-out;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.glass-panel-glow:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 15px 40px -10px rgba(59, 130, 246, 0.2);
-  transform: translateY(-4px);
+.arch-card-interactive {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Clean Dark Typography Gradients */
-.text-gradient-cyan {
-  background: linear-gradient(135deg, #1d4ed8 0%, #4f46e5 50%, #0284c7 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.arch-card-interactive:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
-.text-gradient-purple {
-  background: linear-gradient(135deg, #7e22ce 0%, #c026d3 50%, #e11d48 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.arch-card-active {
+  background: #ffffff;
+  border: 1.5px solid #2563eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.08);
 }
 
-.text-gradient-emerald {
-  background: linear-gradient(135deg, #047857 0%, #0f766e 50%, #0284c7 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Clean Button Styles */
+.btn-accent {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(37, 99, 235, 0.2);
+}
+.btn-accent:hover {
+  background-color: #1d4ed8;
+  box-shadow: 0 2px 6px 0 rgba(37, 99, 235, 0.25);
+}
+.btn-accent:active {
+  transform: scale(0.98);
 }
 
-/* Advanced Keyframe Animations */
-@keyframes floatSlow {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(0.8deg); }
+.btn-secondary {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+}
+.btn-secondary:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-  50% { box-shadow: 0 0 35px rgba(59, 130, 246, 0.4); }
+.btn-ghost {
+  background-color: transparent;
+  color: #475569;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease-in-out;
+}
+.btn-ghost:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes slideUpFade {
-  0% { opacity: 0; transform: translateY(24px); }
-  100% { opacity: 1; transform: translateY(0); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes scalePop {
-  0% { transform: scale(0.94); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.animate-float {
-  animation: floatSlow 6s ease-in-out infinite;
+@keyframes pulseGlowSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-.animate-pulse-glow {
-  animation: pulseGlow 3s ease-in-out infinite;
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-slide-up {
-  animation: slideUpFade 0.5s ease-out forwards;
+.animate-fade-up {
+  animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-scale-pop {
-  animation: scalePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+.animate-slide-right {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Shimmer overlay class */
-.shimmer-btn {
-  position: relative;
-  overflow: hidden;
+.animate-pulse-subtle {
+  animation: pulseGlowSubtle 2s ease-in-out infinite;
 }
 
-.shimmer-btn::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    60deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 70%
-  );
-  transform: rotate(30deg);
-  animation: shimmer 3.5s infinite;
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

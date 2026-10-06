@@ -47,7 +47,7 @@ class DiversityEngine:
         exclude_set = set(exclude_signatures or [])
         valid_pool = [c for c in candidates if (c.plan_signature or "") not in exclude_set]
         if not valid_pool:
-            valid_pool = candidates
+            return []
 
         selected: List[FloorPlanCandidate] = []
 

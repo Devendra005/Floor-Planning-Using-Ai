@@ -8,7 +8,7 @@ import { SectionDetails2D } from '../components/steel/SectionDetails2D';
 import { StructuralTreeExplorer } from '../components/steel/StructuralTreeExplorer';
 import { RevisionReviewStudio } from '../components/steel/RevisionReviewStudio';
 import {
-  Layers, Box, BarChart2, ShieldAlert, FileText, FileSpreadsheet, Sliders, Award, Compass, Cpu, Eye
+  Layers, Box, BarChart2, ShieldAlert, FileText, FileSpreadsheet, Sliders, Award, Eye, Cpu
 } from 'lucide-react';
 
 export const SteelPlanningPage: React.FC = () => {
@@ -17,80 +17,80 @@ export const SteelPlanningPage: React.FC = () => {
 
   if (!currentProject || !selectedPlan) {
     return (
-      <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 flex flex-col items-center justify-center p-6 text-center bg-animated-grid">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4 animate-float">
-          <Layers className="w-8 h-8" />
+      <div className="min-h-full bg-slate-50 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-4">
+          <Layers className="w-6 h-6" />
         </div>
-        <h3 className="text-2xl font-black text-white">No Active Structural Plan Loaded</h3>
-        <p className="text-sm text-slate-400 mt-2 mb-6 max-w-md">Create or load a floor plan to access the Steel & Reinforcement Detailing Studio.</p>
+        <h3 className="text-xl font-bold text-slate-900">No Active Structural Plan Loaded</h3>
+        <p className="text-xs text-slate-500 mt-1 mb-6 max-w-sm">Create or load a floor plan to access the Steel & Reinforcement Detailing Studio.</p>
         <button
           onClick={() => setActiveTab('wizard')}
-          className="shimmer-btn bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white px-8 py-3.5 rounded-2xl font-extrabold text-sm shadow-xl shadow-indigo-600/30 transition-all hover:scale-105"
+          className="btn-accent px-5 py-2.5 text-xs flex items-center space-x-2"
         >
-          Create Floor Plan
+          <span>Create Floor Plan</span>
         </button>
       </div>
     );
   }
 
   const subNav = [
-    { id: '3d_steel', label: '3D Steel Mapping & Inspector', icon: Eye },
-    { id: 'dashboard', label: 'Steel Dashboard', icon: BarChart2 },
-    { id: 'bbs', label: 'Bar Bending Schedule (BBS)', icon: FileSpreadsheet },
+    { id: '3d_steel', label: '3D Steel View', icon: Eye },
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
+    { id: 'bbs', label: 'Bar Bending Schedule', icon: FileSpreadsheet },
     { id: 'clashes', label: 'Clash Detection', icon: ShieldAlert },
-    { id: 'section2d', label: '2D CAD Sections', icon: FileText },
-    { id: 'tree', label: 'Structural Tree & Exploded', icon: Sliders },
-    { id: 'review', label: 'Engineer Review', icon: Award }
+    { id: 'section2d', label: '2D Sections', icon: FileText },
+    { id: 'tree', label: 'Structural Tree', icon: Sliders },
+    { id: 'review', label: 'Review', icon: Award }
   ];
 
   return (
-    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-8 px-6 bg-animated-grid">
-      <div className="max-w-7xl mx-auto space-y-6 animate-slide-up">
-        
-        {/* Module Header */}
-        <div className="glass-panel p-6 rounded-3xl border-indigo-500/30 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5 shadow-2xl">
-          <div>
-            <div className="inline-flex items-center space-x-2 text-cyan-400 text-xs font-black uppercase tracking-widest font-mono mb-1">
-              <Cpu className="w-4 h-4 text-indigo-400 animate-pulse" />
-              <span>IS 456 / SP 34 Structural BIM Detailing</span>
-            </div>
-            <h2 className="text-2xl font-black text-white tracking-tight">Steel & Reinforcement Planning Studio</h2>
+    <div className="min-h-full bg-slate-50 p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      
+      {/* Module Header */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-600 mb-1">
+            <Cpu className="w-3.5 h-3.5" />
+            <span>IS 456 Structural BIM Detailing</span>
           </div>
-
-          {/* Sub-Navigation Pills */}
-          <div className="flex flex-wrap items-center bg-slate-950 p-1.5 rounded-2xl border border-indigo-500/20 gap-1.5 shadow-inner">
-            {subNav.map((item) => {
-              const Icon = item.icon;
-              const isActive = subTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSubTab(item.id as any)}
-                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-300 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 text-white shadow-lg shadow-indigo-600/30 scale-105'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Steel & Reinforcement Planning</h1>
         </div>
 
-        {/* Dynamic Sub-View Render */}
-        <main className="animate-scale-pop">
-          {subTab === '3d_steel' && <InteractiveSteelView3D />}
-          {subTab === 'dashboard' && <SteelDashboard />}
-          {subTab === 'bbs' && <BarBendingSchedule />}
-          {subTab === 'clashes' && <ClashDetectionStudio />}
-          {subTab === 'section2d' && <SectionDetails2D />}
-          {subTab === 'tree' && <StructuralTreeExplorer />}
-          {subTab === 'review' && <RevisionReviewStudio />}
-        </main>
+        {/* Sub-Navigation Pills */}
+        <div className="flex flex-wrap items-center bg-slate-100 p-1 rounded-lg border border-slate-200 gap-1">
+          {subNav.map((item) => {
+            const Icon = item.icon;
+            const isActive = subTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setSubTab(item.id as any)}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-white text-blue-600 font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Sub-View Render */}
+      <main className="animate-fade-in">
+        {subTab === '3d_steel' && <InteractiveSteelView3D />}
+        {subTab === 'dashboard' && <SteelDashboard />}
+        {subTab === 'bbs' && <BarBendingSchedule />}
+        {subTab === 'clashes' && <ClashDetectionStudio />}
+        {subTab === 'section2d' && <SectionDetails2D />}
+        {subTab === 'tree' && <StructuralTreeExplorer />}
+        {subTab === 'review' && <RevisionReviewStudio />}
+      </main>
+
     </div>
   );
 };
+

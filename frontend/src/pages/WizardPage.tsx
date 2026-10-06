@@ -5,192 +5,112 @@ import { createProjectApi, generateMultipleLayoutsApi, DEMO_REQUIREMENTS } from 
 import { convertToMeters, convertFromMeters } from '../utils/units';
 import { FloorPlanEditor2D } from '../components/editor2d/FloorPlanEditor2D';
 import {
-  Sparkles, ArrowRight, ArrowLeft, Check, Compass, Sliders, ShieldCheck, Home, Plus, Trash2, Loader2, Zap, Layers,
-  Layers2, Cpu, SlidersHorizontal
+  Sparkles, ArrowRight, Compass, Plus, Trash2, Loader2, Zap, Layers,
+  ChevronDown, ChevronUp, CheckCircle2, Sliders, Info
 } from 'lucide-react';
 
 export const WizardPage: React.FC = () => {
   const { setActiveTab, setCurrentProject, setUnit: setStoreUnit } = useProjectStore();
 
-  const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
+  const [loadingStep, setLoadingStep] = useState<number>(0);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   // Form State
-  const [name, setName] = useState('My Dream Home');
-  const [description, setDescription] = useState('2 Story modern Vastu compliant home');
+  const [name, setName] = useState('My Architectural Home');
+  const [description, setDescription] = useState('2-Story Vastu Compliant Residence');
   const [projectType, setProjectType] = useState('Residential Single Family');
   const [location, setLocation] = useState('India');
 
-  // Plot State (stored internally in meters, displayed in unit)
+  // Plot State
   const [unit, setUnitState] = useState<UnitType>('feet');
   const [plotLengthUnit, setPlotLengthUnit] = useState<number>(40); // 40 ft
   const [plotWidthUnit, setPlotWidthUnit] = useState<number>(30);   // 30 ft
-  // Direct Structured Inputs
-  const [floorsCount, setFloorsCount] = useState<number>(2); // 1 to 10 floors
-  const [bedroomCount, setBedroomCount] = useState<number>(3); // 1 to 10 bedrooms
-  const [washroomCount, setWashroomCount] = useState<number>(2); // 1 to 10 washrooms
-  const [hasPujaRoom, setHasPujaRoom] = useState<boolean>(true); // Puja room compulsory
-  const [hasLivingRoom, setHasLivingRoom] = useState<boolean>(true); // Living room compulsory
-  const [hasMasterBedroom, setHasMasterBedroom] = useState<boolean>(true); // Master bedroom included
+  const [floorsCount, setFloorsCount] = useState<number>(2);
+  const [bedroomCount, setBedroomCount] = useState<number>(3);
+  const [washroomCount, setWashroomCount] = useState<number>(2);
+  const [hasPujaRoom, setHasPujaRoom] = useState<boolean>(true);
+  const [hasLivingRoom, setHasLivingRoom] = useState<boolean>(true);
+  const [hasMasterBedroom, setHasMasterBedroom] = useState<boolean>(true);
 
   // Multi-Plan Diversity State
   const [numPlans, setNumPlans] = useState<number>(5);
   const [vastuStrictness, setVastuStrictness] = useState<'STRICT' | 'BALANCED' | 'FLEXIBLE'>('BALANCED');
   const [similarityThreshold, setSimilarityThreshold] = useState<number>(70);
 
-
   // Orientation & Setbacks State
   const [orientation, setOrientation] = useState<OrientationType>('E');
   const [northAngle, setNorthAngle] = useState<number>(0);
   const [vastuMode, setVastuMode] = useState<'STRICT' | 'BALANCED' | 'FLEXIBLE'>('BALANCED');
-  const [setbackFront, setSetbackFront] = useState<number>(4); // 4 ft
-  const [setbackRear, setSetbackRear] = useState<number>(3);  // 3 ft
-  const [setbackLeft, setSetbackLeft] = useState<number>(3);  // 3 ft
-  const [setbackRight, setSetbackRight] = useState<number>(3); // 3 ft
+  const [setbackFront, setSetbackFront] = useState<number>(4);
+  const [setbackRear, setSetbackRear] = useState<number>(3);
+  const [setbackLeft, setSetbackLeft] = useState<number>(3);
+  const [setbackRight, setSetbackRight] = useState<number>(3);
 
-  // Requirements State (Initialized automatically from direct inputs)
+  // Auto-build room requirements from inputs
   const buildRequirementsFromDirectInputs = (): RoomRequirement[] => {
     const reqs: RoomRequirement[] = [];
     let reqId = 1;
 
-    // 1. Living Room (if compulsory)
     if (hasLivingRoom) {
       reqs.push({
-        id: `req-${reqId++}`,
-        name: 'Living Room',
-        room_type: 'living',
-        min_width: 3.6,
-        min_length: 4.2,
-        preferred_width: 4.2,
-        preferred_length: 4.8,
-        priority: 1,
-        quantity: 1,
-        privacy_level: 'low',
-        preferred_direction: 'NE',
-        adjacent_to: ['entrance', 'dining']
+        id: `req-${reqId++}`, name: 'Living Room', room_type: 'living',
+        min_width: 3.6, min_length: 4.2, preferred_width: 4.2, preferred_length: 4.8,
+        priority: 1, quantity: 1, privacy_level: 'low', preferred_direction: 'NE', adjacent_to: ['entrance', 'dining']
       });
     }
 
-    // 2. Kitchen (essential)
     reqs.push({
-      id: `req-${reqId++}`,
-      name: 'Kitchen',
-      room_type: 'kitchen',
-      min_width: 2.4,
-      min_length: 2.7,
-      preferred_width: 2.7,
-      preferred_length: 3.0,
-      priority: 1,
-      quantity: 1,
-      privacy_level: 'medium',
-      preferred_direction: 'SE',
-      adjacent_to: ['dining']
+      id: `req-${reqId++}`, name: 'Kitchen', room_type: 'kitchen',
+      min_width: 2.4, min_length: 2.7, preferred_width: 2.7, preferred_length: 3.0,
+      priority: 1, quantity: 1, privacy_level: 'medium', preferred_direction: 'SE', adjacent_to: ['dining']
     });
 
-    // 3. Puja Room (if compulsory)
     if (hasPujaRoom) {
       reqs.push({
-        id: `req-${reqId++}`,
-        name: 'Puja Room',
-        room_type: 'puja',
-        min_width: 1.8,
-        min_length: 1.8,
-        preferred_width: 2.1,
-        preferred_length: 2.1,
-        priority: 1,
-        quantity: 1,
-        privacy_level: 'high',
-        preferred_direction: 'NE',
-        adjacent_to: []
+        id: `req-${reqId++}`, name: 'Puja Room', room_type: 'puja',
+        min_width: 1.8, min_length: 1.8, preferred_width: 2.1, preferred_length: 2.1,
+        priority: 1, quantity: 1, privacy_level: 'high', preferred_direction: 'NE', adjacent_to: []
       });
     }
 
-    // 4. Bedrooms & Master Bedroom
     let remainingBeds = bedroomCount;
     if (hasMasterBedroom && remainingBeds > 0) {
       reqs.push({
-        id: `req-${reqId++}`,
-        name: 'Master Bedroom',
-        room_type: 'master_bedroom',
-        min_width: 3.3,
-        min_length: 3.9,
-        preferred_width: 3.6,
-        preferred_length: 4.2,
-        priority: 1,
-        quantity: 1,
-        privacy_level: 'high',
-        preferred_direction: 'SW',
-        adjacent_to: []
+        id: `req-${reqId++}`, name: 'Master Bedroom', room_type: 'master_bedroom',
+        min_width: 3.3, min_length: 3.9, preferred_width: 3.6, preferred_length: 4.2,
+        priority: 1, quantity: 1, privacy_level: 'high', preferred_direction: 'SW', adjacent_to: []
       });
       remainingBeds--;
     }
 
     for (let i = 0; i < remainingBeds; i++) {
       reqs.push({
-        id: `req-${reqId++}`,
-        name: `Bedroom ${i + (hasMasterBedroom ? 2 : 1)}`,
-        room_type: 'bedroom',
-        min_width: 3.0,
-        min_length: 3.3,
-        preferred_width: 3.3,
-        preferred_length: 3.6,
-        priority: 2,
-        quantity: 1,
-        privacy_level: 'high',
-        preferred_direction: i % 2 === 0 ? 'NW' : 'W',
-        adjacent_to: []
+        id: `req-${reqId++}`, name: `Bedroom ${i + (hasMasterBedroom ? 2 : 1)}`, room_type: 'bedroom',
+        min_width: 3.0, min_length: 3.3, preferred_width: 3.3, preferred_length: 3.6,
+        priority: 2, quantity: 1, privacy_level: 'high', preferred_direction: i % 2 === 0 ? 'NW' : 'W', adjacent_to: []
       });
     }
 
-    // 5. Washrooms / Bathrooms
     for (let i = 0; i < washroomCount; i++) {
       const isMasterAttached = i === 0 && hasMasterBedroom;
       reqs.push({
-        id: `req-${reqId++}`,
-        name: isMasterAttached ? 'Master Washroom (Attached)' : `Washroom ${i + 1}`,
-        room_type: 'toilet',
-        min_width: 1.5,
-        min_length: 2.1,
-        preferred_width: 1.8,
-        preferred_length: 2.4,
-        priority: 1,
-        quantity: 1,
-        privacy_level: 'high',
-        preferred_direction: 'NW',
-        adjacent_to: isMasterAttached ? ['master_bedroom'] : []
+        id: `req-${reqId++}`, name: isMasterAttached ? 'Master Washroom (Attached)' : `Washroom ${i + 1}`,
+        room_type: 'toilet', min_width: 1.5, min_length: 2.1, preferred_width: 1.8, preferred_length: 2.4,
+        priority: 1, quantity: 1, privacy_level: 'high', preferred_direction: 'NW', adjacent_to: isMasterAttached ? ['master_bedroom'] : []
       });
     }
 
-    // 6. Parking & Porch
     reqs.push({
-      id: `req-${reqId++}`,
-      name: 'Parking & Porch',
-      room_type: 'parking',
-      min_width: 3.0,
-      min_length: 4.5,
-      preferred_width: 3.3,
-      preferred_length: 4.8,
-      priority: 2,
-      quantity: 1,
-      privacy_level: 'low',
-      preferred_direction: 'NW',
-      adjacent_to: []
+      id: `req-${reqId++}`, name: 'Parking & Porch', room_type: 'parking',
+      min_width: 3.0, min_length: 4.5, preferred_width: 3.3, preferred_length: 4.8,
+      priority: 2, quantity: 1, privacy_level: 'low', preferred_direction: 'NW', adjacent_to: []
     });
 
-    // 7. Mandatory Main Staircase
     reqs.push({
-      id: `req-${reqId++}`,
-      name: 'Main Staircase (Mandatory)',
-      room_type: 'staircase',
-      min_width: 2.2,
-      min_length: 3.2,
-      preferred_width: 2.4,
-      preferred_length: 3.5,
-      priority: 1,
-      quantity: 1,
-      privacy_level: 'low',
-      preferred_direction: 'S',
-      adjacent_to: ['living']
+      id: `req-${reqId++}`, name: 'Main Staircase', room_type: 'staircase',
+      min_width: 2.2, min_length: 3.2, preferred_width: 2.4, preferred_length: 3.5,
+      priority: 1, quantity: 1, privacy_level: 'low', preferred_direction: 'S', adjacent_to: ['living']
     });
 
     return reqs;
@@ -198,7 +118,6 @@ export const WizardPage: React.FC = () => {
 
   const [requirements, setRequirements] = useState<RoomRequirement[]>(DEMO_REQUIREMENTS);
 
-  // Auto-sync requirements whenever direct input counts change
   React.useEffect(() => {
     setRequirements(buildRequirementsFromDirectInputs());
   }, [bedroomCount, washroomCount, hasPujaRoom, hasLivingRoom, hasMasterBedroom]);
@@ -220,30 +139,23 @@ export const WizardPage: React.FC = () => {
     setPlotWidthUnit(convertFromMeters(wMeters, newUnit));
   };
 
-  const handleAddCustomRoom = () => {
-    const newRoom: RoomRequirement = {
-      id: `req-${Date.now()}`,
-      name: 'Additional Room',
-      room_type: 'bedroom',
-      min_width: 2.7,
-      min_length: 3.0,
-      preferred_width: 3.3,
-      preferred_length: 3.6,
-      priority: 2,
-      quantity: 1,
-      privacy_level: 'medium',
-      preferred_direction: 'NW',
-      adjacent_to: []
-    };
-    setRequirements([...requirements, newRoom]);
-  };
-
-  const handleRemoveRoom = (id: string) => {
-    setRequirements(requirements.filter(r => r.id !== id));
-  };
+  const generationSteps = [
+    'Analyzing plot geometry & setback boundaries...',
+    'Generating spatial room layout candidates...',
+    'Checking zero-overlap vector constraints...',
+    'Evaluating 81-pad Vastu Purusha Mandala alignment...',
+    'Optimizing circulation pathways & plumbing nodes...',
+    'Finalizing architectural plan alternatives...'
+  ];
 
   const handleGenerate = async () => {
     setLoading(true);
+    setLoadingStep(0);
+
+    const stepInterval = setInterval(() => {
+      setLoadingStep((prev) => (prev < generationSteps.length - 1 ? prev + 1 : prev));
+    }, 400);
+
     try {
       const plotMeters: PlotConfig = {
         length: convertToMeters(plotLengthUnit, unit),
@@ -305,503 +217,341 @@ export const WizardPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to generate project:', err);
     } finally {
+      clearInterval(stepInterval);
       setLoading(false);
     }
   };
 
-
-  const [configMode, setConfigMode] = useState<'Room' | 'House' | 'Custom'>('Room');
-
-  const handleUpdateRoomRequirement = (id: string, updates: Partial<RoomRequirement>) => {
-    setRequirements(requirements.map(r => r.id === id ? { ...r, ...updates } : r));
-  };
-
   return (
-    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-6 px-4 md:px-8 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-slide-up">
+    <div className="min-h-full bg-slate-50 p-4 sm:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in relative">
+      
+      {/* AI GENERATION LOADING OVERLAY */}
+      {loading && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-6 animate-fade-up">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto">
+              <Sparkles className="w-6 h-6 animate-spin" style={{ animationDuration: '4s' }} />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-slate-900">Generating AI Floor Plans</h3>
+              <p className="text-xs text-slate-500 font-mono">{generationSteps[loadingStep]}</p>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full transition-all duration-300 ease-out" 
+                style={{ width: `${((loadingStep + 1) / generationSteps.length) * 100}%` }}
+              />
+            </div>
+
+            <p className="text-[11px] text-slate-400">Evaluating 81-Pad Vastu Purusha Mandala and zero-overlap spatial geometry</p>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-600 mb-1">
+            <Zap className="w-3.5 h-3.5" />
+            <span>AI Design Workspace</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Floor Plan Generator</h1>
+        </div>
+
+        <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+          <button
+            onClick={() => handleUnitChange('feet')}
+            className={`px-3 py-1 rounded font-medium transition-all ${unit === 'feet' ? 'bg-white text-blue-600 font-bold shadow-2xs' : 'text-slate-600'}`}
+          >
+            Feet (ft)
+          </button>
+          <button
+            onClick={() => handleUnitChange('meter')}
+            className={`px-3 py-1 rounded font-medium transition-all ${unit === 'meter' ? 'bg-white text-blue-600 font-bold shadow-2xs' : 'text-slate-600'}`}
+          >
+            Meters (m)
+          </button>
+        </div>
+      </div>
+
+      {/* Main 2-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* LEFT PANEL: Room & Layout Configurator */}
-        <div className="lg:col-span-5 bg-white text-slate-900 rounded-3xl p-6 shadow-2xl space-y-6 border border-slate-200">
+        {/* LEFT COLUMN: Input Form Panel */}
+        <div className="lg:col-span-6 space-y-6">
           
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-900 flex items-center space-x-2">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-                <span>Floor Plan Generator</span>
-              </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Customize rooms, plot dimensions and building rules</p>
-            </div>
-            
-            <span className="bg-blue-50 text-blue-700 text-[11px] font-black uppercase px-2.5 py-1 rounded-lg border border-blue-200">
-              AI ENGINE
-            </span>
-          </div>
+          {/* Section 1: Plot Dimensions & Road Orientation */}
+          <div className="arch-card p-6 space-y-4">
+            <h3 className="font-semibold text-slate-900 text-sm flex items-center space-x-2">
+              <Compass className="w-4 h-4 text-blue-600" />
+              <span>1. Plot & Orientation</span>
+            </h3>
 
-          {/* Mode Selector Tabs (Room | House | Custom) */}
-          <div className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-3 gap-1">
-            {(['Room', 'House', 'Custom'] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setConfigMode(mode)}
-                className={`py-2 rounded-xl text-xs font-extrabold transition-all ${
-                  configMode === mode
-                    ? 'bg-white text-blue-600 shadow-md scale-[1.02]'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                {mode} Mode
-              </button>
-            ))}
-          </div>
-
-          {/* Unit Selector Pills (Square Meters | Square Feet) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Measurement Unit</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleUnitChange('meter')}
-                className={`py-3 rounded-2xl border text-xs font-extrabold transition-all ${
-                  unit === 'meter'
-                    ? 'border-blue-600 bg-blue-50/80 text-blue-700 shadow-sm ring-2 ring-blue-500/20'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                Square Meters (m)
-              </button>
-              <button
-                onClick={() => handleUnitChange('feet')}
-                className={`py-3 rounded-2xl border text-xs font-extrabold transition-all ${
-                  unit === 'feet'
-                    ? 'border-blue-600 bg-blue-50/80 text-blue-700 shadow-sm ring-2 ring-blue-500/20'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                Square Feet (ft)
-              </button>
-            </div>
-          </div>
-
-          {/* MODE CONTENT */}
-          {configMode === 'Room' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Configured Rooms ({requirements.length})</span>
-                <button
-                  onClick={handleAddCustomRoom}
-                  className="flex items-center space-x-1 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-xl shadow-sm transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Room</span>
-                </button>
-              </div>
-
-              {/* Rooms List */}
-              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                {requirements.map((req) => (
-                  <div key={req.id} className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2 hover:border-blue-300 transition-colors">
-                    <div className="grid grid-cols-12 gap-2 items-center">
-                      
-                      {/* Room Type Selector */}
-                      <div className="col-span-5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Room Type</label>
-                        <select
-                          value={req.room_type}
-                          onChange={(e) => handleUpdateRoomRequirement(req.id, { room_type: e.target.value, name: e.target.options[e.target.selectedIndex].text })}
-                          className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500"
-                        >
-                          <option value="master_bedroom">Master Bedroom</option>
-                          <option value="bedroom">Bedroom</option>
-                          <option value="kitchen">Kitchen</option>
-                          <option value="living">Living Room</option>
-                          <option value="dining">Dining Room</option>
-                          <option value="puja">Puja Room</option>
-                          <option value="toilet">Bathroom / Toilet</option>
-                          <option value="parking">Parking & Porch</option>
-                        </select>
-                      </div>
-
-                      {/* Width Input */}
-                      <div className="col-span-3">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Width ({unit === 'feet' ? 'ft' : 'm'})</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={unit === 'feet' ? Math.round(req.preferred_width * 3.28) : req.preferred_width}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            const valMeters = unit === 'feet' ? val / 3.28 : val;
-                            handleUpdateRoomRequirement(req.id, { preferred_width: valMeters });
-                          }}
-                          className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-extrabold text-slate-900 font-mono focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      {/* Length Input */}
-                      <div className="col-span-3">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Length ({unit === 'feet' ? 'ft' : 'm'})</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={unit === 'feet' ? Math.round(req.preferred_length * 3.28) : req.preferred_length}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            const valMeters = unit === 'feet' ? val / 3.28 : val;
-                            handleUpdateRoomRequirement(req.id, { preferred_length: valMeters });
-                          }}
-                          className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-extrabold text-slate-900 font-mono focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      {/* Delete Button */}
-                      <div className="col-span-1 flex justify-end pt-3">
-                        <button
-                          onClick={() => handleRemoveRoom(req.id)}
-                          className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-colors"
-                          title="Remove Room"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {configMode === 'House' && (
-            <div className="space-y-4 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200">
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-700 uppercase">Number of Floors</label>
-                <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                  {[1, 2, 3, 4, 5].map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setFloorsCount(f)}
-                      className={`py-2 px-0.5 sm:px-2 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
-                        floorsCount === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
-                      }`}
-                    >
-                      {f} Story
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-700 uppercase">Bedrooms Count</label>
-                <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                  {[1, 2, 3, 4, 5].map((b) => (
-                    <button
-                      key={b}
-                      onClick={() => setBedroomCount(b)}
-                      className={`py-2 px-0.5 sm:px-2 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
-                        bedroomCount === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
-                      }`}
-                    >
-                      {b} Bed
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-700 uppercase">Washrooms Count</label>
-                <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                  {[1, 2, 3, 4, 5].map((w) => (
-                    <button
-                      key={w}
-                      onClick={() => setWashroomCount(w)}
-                      className={`py-2 px-0.5 sm:px-2 rounded-xl text-[10px] sm:text-xs font-bold border transition-all ${
-                        washroomCount === w ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
-                      }`}
-                    >
-                      {w} Bath
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-2">
-                <label className="flex items-center space-x-2 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer">
-                  <input type="checkbox" checked={hasPujaRoom} onChange={(e) => setHasPujaRoom(e.target.checked)} className="accent-blue-600 w-4 h-4" />
-                  <span>Puja Room</span>
-                </label>
-                <label className="flex items-center space-x-2 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer">
-                  <input type="checkbox" checked={hasMasterBedroom} onChange={(e) => setHasMasterBedroom(e.target.checked)} className="accent-blue-600 w-4 h-4" />
-                  <span>Master Suite</span>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {configMode === 'Custom' && (
-            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Plot Length ({unit})</label>
-                <input
-                  type="number"
-                  value={plotLengthUnit}
-                  onChange={(e) => setPlotLengthUnit(Number(e.target.value))}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 font-mono"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">Plot Width ({unit})</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Plot Width ({unit})</label>
                 <input
                   type="number"
                   value={plotWidthUnit}
                   onChange={(e) => setPlotWidthUnit(Number(e.target.value))}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 font-mono"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Plot Length ({unit})</label>
+                <input
+                  type="number"
+                  value={plotLengthUnit}
+                  onChange={(e) => setPlotLengthUnit(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
-          )}
 
-          {/* Vastu Mode & Plot Orientation Selector Card */}
-          <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center space-x-1.5">
-                <Compass className="w-4 h-4 text-amber-600" />
-                <span>Vastu Engine Preferences</span>
-              </span>
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
-                INTEGRATED
-              </span>
-            </div>
-
-            {/* Vastu Modes */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-600 uppercase">Vastu Compliance Mode</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { mode: 'STRICT', label: 'Strict', desc: '60% Weight' },
-                  { mode: 'BALANCED', label: 'Balanced', desc: '35% Weight' },
-                  { mode: 'FLEXIBLE', label: 'Flexible', desc: '15% Weight' }
-                ].map((item) => (
-                  <button
-                    key={item.mode}
-                    type="button"
-                    onClick={() => setVastuMode(item.mode as any)}
-                    className={`p-2 rounded-xl text-left border transition-all ${
-                      vastuMode === item.mode
-                        ? 'bg-amber-500 text-white border-amber-600 shadow-sm font-black'
-                        : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100/50 font-bold'
-                    }`}
-                  >
-                    <div className="text-xs">{item.label}</div>
-                    <div className={`text-[9px] ${vastuMode === item.mode ? 'text-amber-100' : 'text-slate-400'}`}>{item.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Plot Facing / Orientation & Custom North Angle */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Plot Road Facing</label>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Road Direction</label>
                 <select
                   value={orientation}
                   onChange={(e) => setOrientation(e.target.value as any)}
-                  className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                 >
-                  <option value="N">North Facing Plot</option>
-                  <option value="NE">North-East Facing Plot</option>
-                  <option value="E">East Facing Plot</option>
-                  <option value="SE">South-East Facing Plot</option>
-                  <option value="S">South Facing Plot</option>
-                  <option value="SW">South-West Facing Plot</option>
-                  <option value="W">West Facing Plot</option>
-                  <option value="NW">North-West Facing Plot</option>
+                  <option value="N">North Facing</option>
+                  <option value="NE">North-East Facing</option>
+                  <option value="E">East Facing</option>
+                  <option value="SE">South-East Facing</option>
+                  <option value="S">South Facing</option>
+                  <option value="SW">South-West Facing</option>
+                  <option value="W">West Facing</option>
+                  <option value="NW">North-West Facing</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">North Angle (°)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="360"
-                  value={northAngle}
-                  onChange={(e) => setNorthAngle(Number(e.target.value))}
-                  placeholder="0° (Default Top)"
-                  className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-amber-500 font-mono"
+                <label className="text-xs font-medium text-slate-600 block mb-1">Vastu Mode</label>
+                <select
+                  value={vastuMode}
+                  onChange={(e) => setVastuMode(e.target.value as any)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                >
+                  <option value="BALANCED">Balanced Compliance</option>
+                  <option value="STRICT">Strict Vastu</option>
+                  <option value="FLEXIBLE">Flexible Vastu</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Building Specs & Room Requirements */}
+          <div className="arch-card p-6 space-y-4">
+            <h3 className="font-semibold text-slate-900 text-sm flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-blue-600" />
+              <span>2. Rooms & Specifications</span>
+            </h3>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Floors</label>
+                <select
+                  value={floorsCount}
+                  onChange={(e) => setFloorsCount(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
+                >
+                  {[1, 2, 3, 4].map(f => <option key={f} value={f}>{f} Story</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Bedrooms</label>
+                <select
+                  value={bedroomCount}
+                  onChange={(e) => setBedroomCount(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
+                >
+                  {[1, 2, 3, 4, 5].map(b => <option key={b} value={b}>{b} BHK</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Bathrooms</label>
+                <select
+                  value={washroomCount}
+                  onChange={(e) => setWashroomCount(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900"
+                >
+                  {[1, 2, 3, 4].map(w => <option key={w} value={w}>{w} Bath</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <label className="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={hasPujaRoom} 
+                  onChange={(e) => setHasPujaRoom(e.target.checked)} 
+                  className="accent-blue-600 w-4 h-4 rounded" 
                 />
-              </div>
+                <span>Puja Room (Mandir)</span>
+              </label>
+
+              <label className="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={hasMasterBedroom} 
+                  onChange={(e) => setHasMasterBedroom(e.target.checked)} 
+                  className="accent-blue-600 w-4 h-4 rounded" 
+                />
+                <span>Master Suite</span>
+              </label>
             </div>
           </div>
 
-          {/* AI Multiple Unique Floor Plans & Layout Diversity Engine */}
-          <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-blue-950 text-white p-5 rounded-3xl border border-indigo-500/40 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-indigo-800/40 pb-3">
+          {/* Section 3: Progressive Disclosure - Advanced Options Collapsible */}
+          <div className="arch-card overflow-hidden">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full p-4 text-left flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-cyan-300">
-                  <Cpu className="w-4 h-4" />
+                <Sliders className="w-4 h-4 text-slate-500" />
+                <span>Advanced Options & Setbacks</span>
+              </div>
+              {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showAdvanced && (
+              <div className="p-6 border-t border-slate-200 space-y-4 bg-slate-50/50 animate-fade-in">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-600 block">Setbacks ({unit})</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Front</span>
+                      <input
+                        type="number"
+                        value={setbackFront}
+                        onChange={(e) => setSetbackFront(Number(e.target.value))}
+                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Rear</span>
+                      <input
+                        type="number"
+                        value={setbackRear}
+                        onChange={(e) => setSetbackRear(Number(e.target.value))}
+                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Left</span>
+                      <input
+                        type="number"
+                        value={setbackLeft}
+                        onChange={(e) => setSetbackLeft(Number(e.target.value))}
+                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Right</span>
+                      <input
+                        type="number"
+                        value={setbackRight}
+                        onChange={(e) => setSetbackRight(Number(e.target.value))}
+                        className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-cyan-300 flex items-center space-x-1.5">
-                    <span>Layout Diversity Engine</span>
-                  </h4>
-                  <p className="text-[10px] text-slate-400">Generate multiple genuinely different architectural typologies</p>
+
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-medium text-slate-600 block">Number of Generated Alternatives</label>
+                  <div className="flex items-center space-x-2">
+                    {[3, 5, 10].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setNumPlans(n)}
+                        className={`px-3 py-1 rounded text-xs font-semibold border transition-all ${
+                          numPlans === n ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {n} Plans
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <span className="text-[10px] bg-cyan-500/20 text-cyan-300 font-extrabold px-2 py-0.5 rounded-md border border-cyan-500/30 font-mono">
-                ZERO DUPLICATES
-              </span>
-            </div>
-
-            {/* Number of Plans Selector */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300 flex justify-between">
-                <span>Number of Unique Floor Plans</span>
-                <span className="text-cyan-400 font-bold">{numPlans} Distinct Options</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[3, 5, 10].map((count) => (
-                  <button
-                    key={count}
-                    type="button"
-                    onClick={() => setNumPlans(count)}
-                    className={`py-2 px-3 rounded-xl text-xs font-black transition-all border ${
-                      numPlans === count
-                        ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-500/30 scale-[1.02]'
-                        : 'bg-slate-900/80 text-slate-300 border-slate-700 hover:border-slate-500 hover:text-white'
-                    }`}
-                  >
-                    {count} Plans
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Vastu Strictness */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-300 flex justify-between">
-                <span>Vastu Diversity Strictness</span>
-                <span className="text-emerald-400 font-bold">{vastuStrictness}</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['BALANCED', 'STRICT', 'FLEXIBLE'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setVastuStrictness(mode)}
-                    className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all border ${
-                      vastuStrictness === mode
-                        ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                        : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:text-slate-200'
-                    }`}
-                  >
-                    {mode === 'BALANCED' ? 'Balanced' : mode === 'STRICT' ? 'Strict' : 'Flexible'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Similarity Rejection Threshold */}
-            <div className="space-y-1 bg-slate-900/60 p-3 rounded-2xl border border-indigo-900/50">
-              <div className="flex justify-between text-[10px] font-extrabold text-slate-300">
-                <span>Max Allowable Similarity:</span>
-                <span className="text-amber-400 font-mono font-black">{similarityThreshold}% (Rejection Threshold)</span>
-              </div>
-              <input
-                type="range"
-                min="50"
-                max="85"
-                step="5"
-                value={similarityThreshold}
-                onChange={(e) => setSimilarityThreshold(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-              />
-              <p className="text-[9px] text-slate-400 leading-tight">
-                Rejects candidate layouts that share over {similarityThreshold}% spatial or visual structure.
-              </p>
-            </div>
+            )}
           </div>
 
-          {/* Action CTA Button */}
+          {/* Primary Action Button */}
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-black text-sm py-4 rounded-2xl shadow-xl shadow-blue-500/30 transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center space-x-2.5 border border-blue-400/40"
+            className="btn-accent w-full py-3.5 text-sm flex items-center justify-center space-x-2"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Generating {numPlans} Unique Architectural Layouts...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-5 h-5 fill-white stroke-none animate-pulse" />
-                <span>Generate {numPlans} Unique Floor Plans</span>
-              </>
-            )}
+            <Sparkles className="w-4 h-4" />
+            <span>Generate Floor Plan</span>
           </button>
 
         </div>
 
+        {/* RIGHT COLUMN: Live Configuration & Plot Summary */}
+        <div className="lg:col-span-6 arch-card p-6 space-y-6">
+          <div>
+            <h3 className="font-semibold text-slate-900 text-sm mb-1">Live Plot & Room Summary</h3>
+            <p className="text-xs text-slate-500">Preview of configuration before AI layout optimization</p>
+          </div>
 
-        {/* RIGHT PANEL: Live Blueprint Preview & Canvas */}
-        <div className="lg:col-span-7 bg-white text-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-6 flex flex-col justify-between min-h-[640px]">
-          
-          {/* Top Canvas Header Tabs */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-2xl">
-              <button className="px-4 py-1.5 bg-white text-blue-600 font-extrabold text-xs rounded-xl shadow-sm">
-                Examples
-              </button>
-              <button className="px-4 py-1.5 text-slate-500 font-bold text-xs rounded-xl hover:text-slate-900">
-                History
-              </button>
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3 font-mono text-xs">
+            <div className="flex justify-between border-b border-slate-200 pb-2">
+              <span className="text-slate-500">Total Plot Area:</span>
+              <span className="font-bold text-slate-900">{plotWidthUnit * plotLengthUnit} sq.{unit} ({plotWidthUnit} × {plotLengthUnit} {unit})</span>
             </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setActiveTab('editor2d')}
-                className="px-3.5 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-extrabold rounded-xl hover:bg-blue-100 transition-colors"
-              >
-                2D Blueprint
-              </button>
-              <button
-                onClick={() => setActiveTab('viewer3d')}
-                className="px-3.5 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl hover:bg-slate-200 transition-colors"
-              >
-                3D Model
-              </button>
+            <div className="flex justify-between border-b border-slate-200 pb-2">
+              <span className="text-slate-500">Road Orientation:</span>
+              <span className="font-bold text-blue-600">{orientation} Facing</span>
+            </div>
+            <div className="flex justify-between border-b border-slate-200 pb-2">
+              <span className="text-slate-500">Building Height:</span>
+              <span className="font-bold text-slate-900">{floorsCount} Story Structure</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Configured Rooms:</span>
+              <span className="font-bold text-slate-900">{requirements.length} Rooms</span>
             </div>
           </div>
 
-          {/* Title Header */}
-          <div className="text-center space-y-1">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight flex items-center justify-center space-x-2">
-              <Sparkles className="w-5 h-5 text-blue-600" />
-              <span>✦ Create Your Dream Floor Plan ✦</span>
-            </h3>
-            <p className="text-xs text-slate-500 font-medium">Turn your ideas into a functional, Vastu-compliant architectural floor plan with AI.</p>
-          </div>
-
-          {/* Main Blueprint Preview Card */}
-          <div className="relative flex-1 bg-slate-50 rounded-2xl border border-slate-200 p-4 flex items-center justify-center min-h-[380px] shadow-inner overflow-hidden">
-            
-            {/* Live 2D Editor Canvas */}
-            <div className="w-full h-full">
-              <FloorPlanEditor2D />
+          {/* Minimal Room Badges */}
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-slate-600 block">Room Allocation List</span>
+            <div className="flex flex-wrap gap-1.5">
+              {requirements.map((r) => (
+                <span key={r.id} className="text-[11px] font-medium bg-slate-100 text-slate-700 px-2.5 py-1 rounded border border-slate-200">
+                  {r.name}
+                </span>
+              ))}
             </div>
-
           </div>
 
-          {/* Footer Pagination Dots */}
-          <div className="flex justify-center items-center space-x-2 pt-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm" />
-            <span className="w-2 h-2 rounded-full bg-slate-300" />
-            <span className="w-2 h-2 rounded-full bg-slate-300" />
+          {/* Preview Placeholder canvas */}
+          <div className="bg-slate-50 rounded-lg border border-slate-200 p-6 text-center space-y-2 min-h-[220px] flex flex-col justify-center items-center">
+            <Compass className="w-8 h-8 text-blue-600 stroke-[1.5]" />
+            <p className="text-xs font-semibold text-slate-700">Ready to Generate Layouts</p>
+            <p className="text-[11px] text-slate-400 max-w-xs">
+              Click &quot;Generate Floor Plan&quot; to run the multi-objective genetic algorithm layout solver.
+            </p>
           </div>
-
         </div>
 
       </div>
+
     </div>
   );
 };
+

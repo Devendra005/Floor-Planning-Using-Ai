@@ -1,10 +1,19 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+import logging
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
 from typing import Optional, Dict, Any
+from app.core.config import settings
 from app.vision.pipeline import run_floorplan_vision_pipeline
 from app.vision.scale import estimate_or_calibrate_scale
 from app.models.pydantic_schemas import VisionCalibrationRequest, VisionCommitRequest
 
+logger = logging.getLogger("vastucraft_vision")
+
 router = APIRouter(prefix="/vision", tags=["Floor Plan Vision Engine"])
+
+ALLOWED_MIME_TYPES = {
+    "image/jpeg", "image/png", "image/bmp", "image/tiff", "image/webp", "application/pdf"
+}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".pdf"}
 
 @router.post("/analyze-floorplan")
 async def analyze_floorplan(
@@ -17,11 +26,33 @@ async def analyze_floorplan(
     wall extraction, room contours, column candidates, opening detection, and OCR room classification.
     """
     if not file.content_type and not file.filename:
-        raise HTTPException(status_code=400, detail="Invalid file payload.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file payload.")
 
+    # Validate file extension / MIME type
+    filename = (file.filename or "").lower()
+    content_type = (file.content_type or "").lower()
+    
+    ext_valid = any(filename.endswith(ext) for ext in ALLOWED_EXTENSIONS)
+    mime_valid = any(content_type.startswith(mime) for mime in ["image/", "application/pdf"]) or content_type in ALLOWED_MIME_TYPES
+
+    if not (ext_valid or mime_valid):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported file format. Please upload an image (JPG, PNG, BMP, TIFF) or PDF file."
+        )
+
+    # Read and enforce maximum file size limit
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     contents = await file.read()
+    
     if len(contents) == 0:
-        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file uploaded.")
+
+    if len(contents) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File size exceeds maximum permitted limit of {settings.MAX_UPLOAD_SIZE_MB}MB."
+        )
 
     try:
         result = run_floorplan_vision_pipeline(contents, unit=unit)
@@ -57,7 +88,11 @@ async def analyze_floorplan(
 
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Vision pipeline processing error: {str(e)}")
+        logger.error(f"Vision pipeline processing error for file '{file.filename}': {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process floor plan image. Please ensure file is a valid architectural drawing."
+        )
 
 @router.post("/calibrate-scale")
 async def calibrate_scale(payload: VisionCalibrationRequest):

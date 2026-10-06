@@ -234,82 +234,86 @@ export const FloorPlanEditor2D: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem-2.5rem)] bg-slate-50 flex flex-col overflow-hidden select-none" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-      {/* Top Toolbar */}
-      <div className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2 sm:h-16 flex flex-wrap lg:flex-nowrap items-center justify-between z-20 shrink-0 shadow-sm gap-2 overflow-x-auto">
-        {/* Floor & Theme Controls */}
-        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-          <span className="text-[11px] sm:text-xs font-extrabold text-slate-700 uppercase tracking-wider hidden xs:inline">Floor:</span>
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 space-x-1 overflow-x-auto max-w-[200px] sm:max-w-md">
-            {availableFloorsList.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFloor(f)}
-                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-extrabold font-mono transition-all whitespace-nowrap ${
-                  activeFloor === f ? 'bg-blue-600 text-white shadow-sm scale-105' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+    <div className="h-[calc(100vh-3.5rem-2rem)] bg-slate-50 flex flex-col overflow-hidden select-none" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      {/* Top Floating Control Bar */}
+      <div className="bg-white border-b border-slate-200 px-4 py-2 flex flex-wrap items-center justify-between z-20 shrink-0 shadow-2xs gap-3">
+        {/* Floor Level Selector & Theme */}
+        <div className="flex items-center space-x-3 shrink-0">
+          <div className="flex items-center space-x-1.5 text-xs text-slate-500 font-medium">
+            <span>Floor Level:</span>
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+              {availableFloorsList.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFloor(f)}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold font-mono transition-all ${
+                    activeFloor === f ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
 
           {activeFloorLevel > 0 && activeFloorLevel !== 99 && (
             <button
               onClick={handleCopyGFToCurrentFloor}
-              className="flex items-center space-x-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
+              className="btn-secondary px-2.5 py-1 text-xs flex items-center space-x-1"
               title="Copy Ground Floor layout to current floor"
             >
               <Copy className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Clone GF to {activeFloor}</span>
+              <span className="hidden sm:inline">Clone GF</span>
             </button>
           )}
 
           <button
             onClick={() => setThemeMode(isLight ? 'blueprint_dark' : 'blueprint_light')}
-            className="flex items-center space-x-1 sm:space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-xl text-xs font-bold transition-all shrink-0"
+            className="btn-secondary px-2.5 py-1 text-xs flex items-center space-x-1"
           >
-            {isLight ? <Moon className="w-4 h-4 text-indigo-600" /> : <Sun className="w-4 h-4 text-amber-500" />}
-            <span className="hidden sm:inline">{isLight ? 'Dark Mode' : 'Light Mode'}</span>
+            {isLight ? <Moon className="w-3.5 h-3.5 text-indigo-600" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+            <span className="hidden sm:inline">{isLight ? 'Dark Theme' : 'Light Theme'}</span>
           </button>
         </div>
 
-        {/* Single Master Plan Header */}
-        <div className="hidden sm:flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-extrabold text-slate-900 shadow-sm shrink-0">
-          <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
-          <span className="truncate max-w-[140px] md:max-w-none">{selectedPlan.name}</span>
-          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md text-[10px] font-mono border border-emerald-300">Vastu: {selectedPlan.vastu_score}/100</span>
+        {/* Selected Plan Info */}
+        <div className="hidden md:flex items-center space-x-2 text-xs font-semibold text-slate-700">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+          <span>{selectedPlan.name}</span>
+          <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
+            Vastu: {selectedPlan.vastu_score}/100
+          </span>
         </div>
 
-        {/* Action CTAs */}
+        {/* Zoom & Action Controls */}
         <div className="flex items-center space-x-2 shrink-0">
           {overlappingRoomIds.size > 0 && (
             <button
               onClick={autoFixOverlaps}
-              className="shimmer-btn flex items-center space-x-1 sm:space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-xl text-xs font-black shadow-md transition-all"
+              className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-xs font-semibold transition-colors"
             >
-              <ShieldAlert className="w-4 h-4" />
-              <span>Fix Overlaps</span>
+              <span>Auto-Fix Overlaps</span>
             </button>
           )}
 
-          <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200 space-x-0.5 sm:space-x-1">
-            <button onClick={() => setZoom(zoom + 0.15)} className="p-1 sm:p-1.5 hover:bg-white rounded-lg text-slate-700"><ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></button>
-            <span className="text-[11px] sm:text-xs font-mono font-extrabold text-blue-600 px-0.5">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(zoom - 0.15)} className="p-1 sm:p-1.5 hover:bg-white rounded-lg text-slate-700"><ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></button>
-            <button onClick={() => setZoom(1.0)} className="p-1 sm:p-1.5 hover:bg-white rounded-lg text-slate-700"><Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></button>
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-slate-700">
+            <button onClick={() => setZoom(zoom + 0.15)} className="p-1 hover:bg-white rounded"><ZoomIn className="w-3.5 h-3.5" /></button>
+            <span className="text-xs font-mono font-semibold text-blue-600 px-1.5">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(zoom - 0.15)} className="p-1 hover:bg-white rounded"><ZoomOut className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setZoom(1.0)} className="p-1 hover:bg-white rounded"><Maximize2 className="w-3.5 h-3.5" /></button>
           </div>
 
-          <button onClick={() => setActiveTab('viewer3d')} className="shimmer-btn flex items-center space-x-1 sm:space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-xl text-xs font-extrabold shadow-md">
-            <Box className="w-4 h-4" />
-            <span className="hidden sm:inline">3D Studio</span>
+          <button onClick={() => setActiveTab('viewer3d')} className="btn-accent px-3 py-1 text-xs flex items-center space-x-1.5">
+            <Box className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Launch 3D</span>
           </button>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Control Sidebar */}
-        <div className="w-72 bg-white border-r border-slate-200 p-4 space-y-5 overflow-y-auto shrink-0 shadow-sm">
+        {/* Left Inspector Sidebar */}
+        <div className="w-64 bg-white border-r border-slate-200 p-4 space-y-5 overflow-y-auto shrink-0">
+
           {/* Quick Add Architectural Elements */}
           <div>
             <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-2.5 flex items-center space-x-2">

@@ -1,128 +1,136 @@
 import React from 'react';
 import { useProjectStore } from '../store/projectStore';
-import { BarChart2, Check, ArrowRight, Award, ShieldCheck, Sparkles, Box } from 'lucide-react';
+import { FloorPlanCandidate } from '../types';
+import { Sparkles, Check, ArrowRight, Award, Image, Box, Layers } from 'lucide-react';
 
 export const PlanComparisonPage: React.FC = () => {
   const { currentProject, selectedPlan, setSelectedPlan, setActiveTab } = useProjectStore();
 
-  if (!currentProject || !selectedPlan) {
+  if (!currentProject || !currentProject.plans || currentProject.plans.length === 0) {
     return (
-      <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 flex flex-col items-center justify-center p-6 text-center bg-animated-grid">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-cyan-400 mb-4 animate-float">
-          <BarChart2 className="w-8 h-8" />
+      <div className="min-h-full bg-slate-50 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-4">
+          <Layers className="w-6 h-6" />
         </div>
-        <h3 className="text-2xl font-black text-white">No Floor Plan Generated</h3>
-        <p className="text-sm text-slate-400 mt-2 mb-6 max-w-md">Configure project inputs in the wizard to generate your master floor plan layout.</p>
+        <h3 className="text-xl font-bold text-slate-900">No Floor Plans Generated Yet</h3>
+        <p className="text-xs text-slate-500 mt-1 mb-6 max-w-sm">Use the AI Floor Plan Generator to configure your plot and create layout alternatives.</p>
         <button
           onClick={() => setActiveTab('wizard')}
-          className="shimmer-btn bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white px-8 py-3.5 rounded-2xl font-extrabold text-sm shadow-xl shadow-indigo-600/30 transition-all hover:scale-105"
+          className="btn-accent px-5 py-2.5 text-xs flex items-center space-x-2"
         >
-          Create Floor Plan
+          <span>Create Floor Plan</span>
+          <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     );
   }
 
-  const plan = selectedPlan;
+  const plans = currentProject.plans;
+
+  const handleSelectPlan = (plan: FloorPlanCandidate) => {
+    setSelectedPlan(plan);
+    setActiveTab('editor2d');
+  };
 
   return (
-    <div className="min-h-[calc(100vh-4rem-2.5rem)] bg-slate-950 py-6 sm:py-10 px-3 sm:px-6 bg-animated-grid">
-      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-slide-up">
-        
-        {/* Header */}
-        <div className="glass-panel p-4 sm:p-6 rounded-3xl border-indigo-500/30 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center space-x-2 sm:space-x-3">
-              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400 shrink-0" />
-              <span>Master Layout Analytics & Vastu Audit</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">Detailed breakdown of space utilization, Vastu score, and structural grid alignment</p>
+    <div className="min-h-full bg-slate-50 p-6 md:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-600 mb-1">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Layout Solver</span>
           </div>
-          
-          <div className="bg-emerald-950/80 px-3.5 py-1.5 rounded-2xl border border-emerald-500/40 flex items-center space-x-2 text-xs font-mono text-emerald-300 shrink-0">
-            <Award className="w-4 h-4 text-amber-400" />
-            <span>VASTU SCORE: {plan.vastu_score}/100</span>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Floor Plan Alternatives</h1>
         </div>
 
-        {/* Master Plan Card */}
-        <div className="glass-panel-glow p-4 sm:p-8 rounded-3xl space-y-6 sm:space-y-8 border-indigo-500/30">
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-800 pb-6">
-            <div>
-              <span className="text-xs font-black uppercase text-gradient-cyan tracking-widest font-mono">Clean & Beautiful Layout</span>
-              <h3 className="text-xl sm:text-2xl font-black text-white mt-1">{plan.name}</h3>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">{currentProject.plot.floors_count || 1} Story &bull; Facing: {currentProject.plot.orientation} &bull; {plan.rooms.length} Configured Rooms</p>
-            </div>
-            
-            <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
-              <button
-                onClick={() => setActiveTab('editor2d')}
-                className="shimmer-btn flex-1 sm:flex-initial flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm shadow-xl shadow-indigo-600/30 transition-all"
-              >
-                <span>2D Blueprint</span>
-                <ArrowRight className="w-4 h-4 stroke-[3]" />
-              </button>
-              <button
-                onClick={() => setActiveTab('viewer3d')}
-                className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-indigo-500/30 font-extrabold px-5 py-3 rounded-2xl text-sm transition-all"
-              >
-                <Box className="w-4 h-4 text-cyan-400" />
-                <span>3D Studio</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Metric Progress Bars */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-indigo-500/20 space-y-2">
-              <div className="flex justify-between text-xs font-bold">
-                <span className="text-slate-300">Vastu Compliance</span>
-                <span className="text-emerald-400 font-mono text-sm font-extrabold">{plan.vastu_score}%</span>
-              </div>
-              <div className="h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full" style={{ width: `${plan.vastu_score}%` }} />
-              </div>
-            </div>
-
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-indigo-500/20 space-y-2">
-              <div className="flex justify-between text-xs font-bold">
-                <span className="text-slate-300">Space Utilization</span>
-                <span className="text-cyan-400 font-mono text-sm font-extrabold">{plan.space_utilization_score}%</span>
-              </div>
-              <div className="h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                <div className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full" style={{ width: `${plan.space_utilization_score}%` }} />
-              </div>
-            </div>
-
-            <div className="bg-slate-900/80 p-5 rounded-2xl border border-indigo-500/20 space-y-2">
-              <div className="flex justify-between text-xs font-bold">
-                <span className="text-slate-300">Structural Grid Alignment</span>
-                <span className="text-indigo-400 font-mono text-sm font-extrabold">{plan.structural_score}%</span>
-              </div>
-              <div className="h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${plan.structural_score}%` }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Vastu Observations */}
-          <div className="space-y-4 pt-4 border-t border-slate-800">
-            <h4 className="text-sm font-extrabold text-white flex items-center space-x-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span>Vastu Compliant Placement Analysis</span>
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {plan.vastu_report.positive_observations.map((obs, i) => (
-                <div key={i} className="flex items-start space-x-3 bg-slate-900/60 p-4 rounded-2xl border border-indigo-500/15">
-                  <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span className="text-xs text-slate-200 font-medium leading-relaxed">{obs}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
+        <span className="text-xs text-slate-500 font-medium font-mono">
+          {plans.length} Unique Alternatives Generated
+        </span>
       </div>
+
+      {/* Alternatives Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {plans.map((plan, index) => {
+          const isSelected = selectedPlan?.id === plan.id;
+          const letter = String.fromCharCode(65 + index); // Plan A, B, C...
+
+          const bedCount = plan.rooms.filter(r => r.type.includes('bedroom')).length;
+          const bathCount = plan.rooms.filter(r => r.type === 'toilet' || r.type === 'bathroom').length;
+
+          return (
+            <div 
+              key={plan.id}
+              className={`arch-card-interactive p-6 space-y-4 flex flex-col justify-between ${isSelected ? 'arch-card-active' : ''}`}
+            >
+              <div className="space-y-3">
+                {/* Header Badge & Vastu Score */}
+                <div className="flex items-center justify-between">
+                  <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                    Plan {letter}
+                  </span>
+
+                  <div className="flex items-center space-x-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded border border-emerald-200 text-xs font-semibold font-mono">
+                    <Award className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Vastu {plan.vastu_score}/100</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">{plan.name || `Alternative Layout ${letter}`}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {bedCount} BHK &bull; {bathCount} Baths &bull; {plan.rooms.length} Rooms Total
+                  </p>
+                </div>
+
+                {/* Score breakdown metrics */}
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-2 text-xs font-mono">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Space Efficiency:</span>
+                    <span className="font-semibold text-slate-900">{plan.space_utilization_score}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Structural Grid:</span>
+                    <span className="font-semibold text-slate-900">{plan.structural_score}%</span>
+                  </div>
+                </div>
+
+                {/* Key Observations / Features */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Key Vastu Features</span>
+                  <div className="space-y-1">
+                    {plan.vastu_report?.positive_observations?.slice(0, 3).map((obs, i) => (
+                      <div key={i} className="flex items-start space-x-2 text-xs text-slate-600">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{obs}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-4 border-t border-slate-100 flex items-center space-x-2">
+                <button
+                  onClick={() => handleSelectPlan(plan)}
+                  className={`w-full py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center space-x-1.5 transition-colors ${
+                    isSelected 
+                      ? 'bg-blue-600 text-white shadow-xs' 
+                      : 'btn-secondary'
+                  }`}
+                >
+                  <Image className="w-3.5 h-3.5" />
+                  <span>{isSelected ? 'Currently Selected' : 'Select Plan & Open 2D'}</span>
+                </button>
+              </div>
+
+            </div>
+          );
+        })}
+      </div>
+
     </div>
   );
 };
+

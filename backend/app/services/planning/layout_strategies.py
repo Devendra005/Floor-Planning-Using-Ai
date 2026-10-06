@@ -1,6 +1,7 @@
 import copy
 import uuid
 import math
+import random
 from typing import List, Dict, Any, Tuple, Optional
 from app.models.pydantic_schemas import (
     PlotConfig, RoomRequirement, LayoutRoom, DoorPlacement, WindowPlacement, VastuProfileEnum
@@ -154,7 +155,7 @@ def build_smart_openings(room_type: str, x: float, y: float, w: float, l: float,
 class LayoutStrategyBuilder:
     """
     Constructs an initial architecturally distinct 2D spatial seed
-    according to a specified layout strategy.
+    according to a specified layout strategy, seed, and plot orientation.
     """
 
     @staticmethod
@@ -163,7 +164,9 @@ class LayoutStrategyBuilder:
         plot: PlotConfig,
         requirements: List[RoomRequirement],
         vastu_profile: VastuProfileEnum = VastuProfileEnum.TRADITIONAL_BASIC,
-        vastu_strictness: str = "BALANCED"
+        vastu_strictness: str = "BALANCED",
+        seed: Optional[int] = None,
+        orientation: Optional[str] = None
     ) -> List[LayoutRoom]:
         sb = plot.setbacks
         min_x = sb.left
@@ -173,6 +176,9 @@ class LayoutStrategyBuilder:
 
         net_w = max_x - min_x
         net_l = max_y - min_y
+
+        rnd = random.Random(seed) if seed is not None else random.Random()
+        orient = orientation or getattr(plot, 'orientation', None) or getattr(plot, 'road_direction', None) or "E"
 
         dispatch = {
             "central_corridor": LayoutStrategyBuilder._layout_central_corridor,
@@ -188,7 +194,7 @@ class LayoutStrategyBuilder:
         }
 
         fn = dispatch.get(strategy_id, LayoutStrategyBuilder._layout_central_corridor)
-        rooms = fn(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness)
+        rooms = fn(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd, orient)
 
         # Distribute rooms across floor levels (GF, F1, F2... Fn) for multi-story buildings
         rooms = LayoutStrategyBuilder._assign_multi_floor_levels(rooms, plot)
@@ -206,10 +212,6 @@ class LayoutStrategyBuilder:
     def _assign_multi_floor_levels(rooms: List[LayoutRoom], plot: PlotConfig) -> List[LayoutRoom]:
         """
         Distributes rooms across requested plot floors_count (1 to 10 floors).
-        - GF (Floor 0): Foyer/Entrance, Living, Kitchen, Dining, Puja, Parking, GF Toilet, Staircase.
-        - F1 (Floor 1): Master Bedroom, Bedroom 2, Kids Room, Family Lounge, Attached Toilets, Balconies.
-        - F2+ (Floor 2..N-1): Additional Bedrooms, Gym, Theater, Toilets, Terraces.
-        - Vertically replicates the Main Staircase onto all floor levels (0..N-1) at matching coordinates.
         """
         num_floors = max(1, min(10, getattr(plot, 'floors_count', 1)))
         if num_floors <= 1:
@@ -271,7 +273,7 @@ class LayoutStrategyBuilder:
                 bed.name = f"{bed.name} (F{fl})"
             assigned_rooms.append(bed)
 
-        # 3. Toilets: 1st stays on GF (Powder room), remaining placed on upper floors (F1, F2...)
+        # 3. Toilets: 1st stays on GF (Powder room), remaining placed on upper floors
         gf_toilets_count = 0
         for toi in toilet_rooms:
             if gf_toilets_count == 0:
@@ -284,7 +286,7 @@ class LayoutStrategyBuilder:
                     toi.name = f"{toi.name} (F{fl})"
             assigned_rooms.append(toi)
 
-        # 4. Staircase: Set to GF and vertically clone to all upper floors (1..num_floors-1)
+        # 4. Staircase: Set to GF and vertically clone to all upper floors
         for st in stair_rooms:
             st.floor_level = 0
             assigned_rooms.append(st)
@@ -297,15 +299,13 @@ class LayoutStrategyBuilder:
 
         return assigned_rooms
 
-
-
     @staticmethod
-    def _layout_central_corridor(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_central_corridor(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
         mid_x = min_x + (net_w / 2.0)
-        corridor_w = 1.2
-        left_w = max(2.5, (net_w - corridor_w) / 2.0)
-        right_w = max(2.5, (net_w - corridor_w) / 2.0)
+        corridor_w = round(rnd.uniform(1.1, 1.3), 2)
+        left_w = max(2.2, (net_w - corridor_w) / 2.0)
+        right_w = max(2.2, (net_w - corridor_w) / 2.0)
 
         left_x = min_x
         right_x = mid_x + (corridor_w / 2.0)
@@ -314,9 +314,16 @@ class LayoutStrategyBuilder:
         curr_left_y = min_y
         curr_right_y = min_y
 
-        for r in cats["outdoor"] + cats["public"] + cats["entrance"]:
-            w = max(1.8, min(left_w, r.preferred_width or 3.6))
-            l = max(1.8, min(net_l * 0.45, r.preferred_length or 4.2))
+        # Public/Entrance rooms placed towards front
+        front_pool = list(cats["outdoor"] + cats["public"] + cats["entrance"])
+        if len(front_pool) > 1:
+            rnd.shuffle(front_pool)
+
+        for r in front_pool:
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(left_w, (r.preferred_width or 3.6) * w_scale))
+            l = max(1.8, min(net_l * 0.45, (r.preferred_length or 4.2) * l_scale))
             doors, wins = build_smart_openings(r.room_type, left_x, curr_left_y, w, l, plot.width, plot.length, "east")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -331,9 +338,15 @@ class LayoutStrategyBuilder:
             ))
             curr_left_y += l + 0.1
 
-        for r in cats["wet_services"][:2] + cats["semi_private"]:
-            w = max(1.8, min(right_w, r.preferred_width or 3.0))
-            l = max(1.8, min(net_l * 0.35, r.preferred_length or 3.2))
+        mid_pool = list(cats["wet_services"][:2] + cats["semi_private"])
+        if len(mid_pool) > 1:
+            rnd.shuffle(mid_pool)
+
+        for r in mid_pool:
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(right_w, (r.preferred_width or 3.0) * w_scale))
+            l = max(1.8, min(net_l * 0.35, (r.preferred_length or 3.2) * l_scale))
             doors, wins = build_smart_openings(r.room_type, right_x, curr_right_y, w, l, plot.width, plot.length, "west")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -348,12 +361,15 @@ class LayoutStrategyBuilder:
             ))
             curr_right_y += l + 0.1
 
-        for idx, r in enumerate(cats["private"] + cats["wet_services"][2:] + cats["utility"]):
+        rear_pool = list(cats["private"] + cats["wet_services"][2:] + cats["utility"])
+        for idx, r in enumerate(rear_pool):
             is_left = (idx % 2 == 0)
             target_x = left_x if is_left else right_x
             target_y = curr_left_y if is_left else curr_right_y
-            w = max(1.8, min(left_w if is_left else right_w, r.preferred_width or 3.2))
-            l = max(1.8, min(3.8, r.preferred_length or 3.6))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(left_w if is_left else right_w, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(3.8, (r.preferred_length or 3.6) * l_scale))
             if target_y + l > max_y:
                 target_y = max(min_y, max_y - l)
             doors, wins = build_smart_openings(r.room_type, target_x, target_y, w, l, plot.width, plot.length, "east" if is_left else "west")
@@ -376,21 +392,30 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_side_corridor(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_side_corridor(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
-        corridor_w = 1.1
-        room_start_x = min_x + corridor_w
-        avail_w = max(2.5, max_x - room_start_x)
+        corridor_w = round(rnd.uniform(1.0, 1.3), 2)
+        
+        # Corridor on left or right side based on seed
+        corridor_on_left = (rnd.random() > 0.5)
+        if corridor_on_left:
+            room_start_x = min_x + corridor_w
+            avail_w = max(2.5, max_x - room_start_x)
+        else:
+            room_start_x = min_x
+            avail_w = max(2.5, max_x - min_x - corridor_w)
 
         curr_y = min_y
         for r in requirements:
-            w = max(1.8, min(avail_w, r.preferred_width or 3.5))
-            l = max(1.8, min(max(2.4, net_l / max(2, len(requirements) // 2)), r.preferred_length or 3.6))
+            w_scale = rnd.uniform(0.88, 1.12)
+            l_scale = rnd.uniform(0.88, 1.12)
+            w = max(1.8, min(avail_w, (r.preferred_width or 3.5) * w_scale))
+            l = max(1.8, min(max(2.4, net_l / max(2, len(requirements) // 2)), (r.preferred_length or 3.6) * l_scale))
             if curr_y + l > max_y:
                 curr_y = min_y
                 room_start_x = min(max_x - w, room_start_x + (avail_w / 2.0))
 
-            doors, wins = build_smart_openings(r.room_type, room_start_x, curr_y, w, l, plot.width, plot.length, "west")
+            doors, wins = build_smart_openings(r.room_type, room_start_x, curr_y, w, l, plot.width, plot.length, "west" if corridor_on_left else "east")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
                 type=r.room_type,
@@ -406,22 +431,28 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_open_plan(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_open_plan(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
         cats = categorize_rooms(requirements)
 
-        front_depth = max(3.0, net_l * 0.45)
+        front_depth_ratio = rnd.uniform(0.40, 0.50)
+        front_depth = max(3.0, net_l * front_depth_ratio)
         front_y = max(min_y + 3.0, max_y - front_depth)
 
-        social_rooms = cats["public"] + cats["semi_private"] + [r for r in cats["wet_services"] if "kitchen" in r.room_type]
-        other_rooms = cats["private"] + [r for r in cats["wet_services"] if "kitchen" not in r.room_type] + cats["utility"] + cats["outdoor"]
+        social_rooms = list(cats["public"] + cats["semi_private"] + [r for r in cats["wet_services"] if "kitchen" in r.room_type])
+        other_rooms = list(cats["private"] + [r for r in cats["wet_services"] if "kitchen" not in r.room_type] + cats["utility"] + cats["outdoor"])
+
+        if len(social_rooms) > 1:
+            rnd.shuffle(social_rooms)
 
         cur_x = min_x
         num_social = max(1, len(social_rooms))
         slot_w = max(2.5, net_w / num_social)
         for r in social_rooms:
-            w = max(1.8, min(slot_w, r.preferred_width or 4.0))
-            l = max(1.8, min(front_depth, r.preferred_length or 4.2))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(slot_w, (r.preferred_width or 4.0) * w_scale))
+            l = max(1.8, min(front_depth, (r.preferred_length or 4.2) * l_scale))
             doors, wins = build_smart_openings(r.room_type, cur_x, front_y, w, l, plot.width, plot.length, "south")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -441,8 +472,10 @@ class LayoutStrategyBuilder:
         row_h = 0.0
         avail_rear_h = max(2.5, front_y - min_y)
         for r in other_rooms:
-            w = max(1.8, min(net_w * 0.5, r.preferred_width or 3.2))
-            l = max(1.8, min(avail_rear_h, r.preferred_length or 3.4))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.5, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(avail_rear_h, (r.preferred_length or 3.4) * l_scale))
             if rear_cur_x + w > max_x:
                 rear_cur_x = min_x
                 rear_cur_y += row_h + 0.1
@@ -467,10 +500,12 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_courtyard(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_courtyard(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
-        court_w = max(2.0, net_w * 0.25)
-        court_l = max(2.0, net_l * 0.25)
+        court_w_ratio = rnd.uniform(0.20, 0.30)
+        court_l_ratio = rnd.uniform(0.20, 0.30)
+        court_w = max(2.0, net_w * court_w_ratio)
+        court_l = max(2.0, net_l * court_l_ratio)
         court_x = min_x + (net_w - court_w) / 2.0
         court_y = min_y + (net_l - court_l) / 2.0
 
@@ -481,12 +516,26 @@ class LayoutStrategyBuilder:
             (min_x, court_x, min_y, court_y),
         ]
 
-        for idx, r in enumerate(requirements):
+        # Vastu-conscious quadrant mapping: NE (Top-Right), SE (Bottom-Right), SW (Bottom-Left), NW (Top-Left)
+        req_shuffled = list(requirements)
+        if rnd.random() > 0.3:
+            # Sort by Vastu preference if possible
+            def zone_pref(r):
+                t = r.room_type.lower()
+                if "puja" in t or "living" in t: return 0 # NE
+                if "kitchen" in t: return 2 # SE
+                if "master" in t: return 3 # SW
+                return 1 # NW
+            req_shuffled.sort(key=zone_pref)
+
+        for idx, r in enumerate(req_shuffled):
             qx1, qx2, qy1, qy2 = quadrants[idx % 4]
             qw = max(2.0, qx2 - qx1)
             ql = max(2.0, qy2 - qy1)
-            w = max(1.8, min(qw, r.preferred_width or 3.2))
-            l = max(1.8, min(ql, r.preferred_length or 3.4))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(qw, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(ql, (r.preferred_length or 3.4) * l_scale))
             rx = qx1 + ((idx // 4) * 0.4)
             ry = qy1 + ((idx // 4) * 0.4)
             rx = max(min_x, min(rx, max_x - w))
@@ -507,19 +556,22 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_l_shaped(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_l_shaped(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
-        wing_w = max(3.0, net_w * 0.55)
+        wing_w_ratio = rnd.uniform(0.50, 0.60)
+        wing_w = max(3.0, net_w * wing_w_ratio)
 
         cats = categorize_rooms(requirements)
-        public_pool = cats["public"] + cats["semi_private"] + cats["outdoor"]
-        private_pool = cats["private"] + cats["wet_services"] + cats["utility"]
+        public_pool = list(cats["public"] + cats["semi_private"] + cats["outdoor"])
+        private_pool = list(cats["private"] + cats["wet_services"] + cats["utility"])
 
         cur_x = min_x
         cur_y = min_y
         for r in public_pool:
-            w = max(1.8, min(wing_w, r.preferred_width or 3.6))
-            l = max(1.8, min(3.8, r.preferred_length or 4.0))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(wing_w, (r.preferred_width or 3.6) * w_scale))
+            l = max(1.8, min(3.8, (r.preferred_length or 4.0) * l_scale))
             doors, wins = build_smart_openings(r.room_type, cur_x, cur_y, w, l, plot.width, plot.length, "north")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -537,8 +589,10 @@ class LayoutStrategyBuilder:
         priv_x = min_x
         priv_y = min(max_y - 2.5, min_y + 3.8 + 0.1)
         for r in private_pool:
-            w = max(1.8, min(net_w * 0.45, r.preferred_width or 3.2))
-            l = max(1.8, min(3.6, r.preferred_length or 3.5))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.45, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(3.6, (r.preferred_length or 3.5) * l_scale))
             if priv_y + l > max_y:
                 priv_y = min_y
                 priv_x = min(max_x - w, priv_x + w + 0.1)
@@ -558,9 +612,10 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_u_shaped(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_u_shaped(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
-        col_w = max(2.5, net_w * 0.35)
+        col_w_ratio = rnd.uniform(0.30, 0.38)
+        col_w = max(2.5, net_w * col_w_ratio)
         left_x = min_x
         right_x = max(min_x + col_w + 1.0, max_x - col_w)
 
@@ -573,8 +628,10 @@ class LayoutStrategyBuilder:
 
         curr_y = min_y
         for r in left_rooms:
-            w = max(1.8, min(col_w, r.preferred_width or 3.2))
-            l = max(1.8, min(3.6, r.preferred_length or 3.5))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(col_w, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(3.6, (r.preferred_length or 3.5) * l_scale))
             doors, wins = build_smart_openings(r.room_type, left_x, curr_y, w, l, plot.width, plot.length, "east")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -591,8 +648,10 @@ class LayoutStrategyBuilder:
 
         curr_y = min_y
         for r in right_rooms:
-            w = max(1.8, min(col_w, r.preferred_width or 3.2))
-            l = max(1.8, min(3.6, r.preferred_length or 3.5))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(col_w, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(3.6, (r.preferred_length or 3.5) * l_scale))
             doors, wins = build_smart_openings(r.room_type, right_x, curr_y, w, l, plot.width, plot.length, "west")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -611,8 +670,10 @@ class LayoutStrategyBuilder:
         avail_rear_w = max(2.5, right_x - rear_x - 0.1)
         rear_y = max(min_y, max_y - (net_l * 0.35))
         for r in rear_rooms:
-            w = max(1.8, min(avail_rear_w, r.preferred_width or 3.4))
-            l = max(1.8, min(net_l * 0.35, r.preferred_length or 3.6))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(avail_rear_w, (r.preferred_width or 3.4) * w_scale))
+            l = max(1.8, min(net_l * 0.35, (r.preferred_length or 3.6) * l_scale))
             doors, wins = build_smart_openings(r.room_type, rear_x, rear_y, w, l, plot.width, plot.length, "south")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -629,7 +690,7 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_linear(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_linear(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
         curr_y = max_y
         total_rooms = max(1, len(requirements))
@@ -641,8 +702,9 @@ class LayoutStrategyBuilder:
                   [r for r in cats["wet_services"] if "kitchen" not in r.room_type] + cats["utility"]
 
         for r in ordered:
-            w = max(1.8, min(net_w * 0.85, r.preferred_width or 3.6))
-            l = max(1.8, min(slice_h * 1.3, r.preferred_length or 3.8))
+            w_scale = rnd.uniform(0.85, 0.95)
+            w = max(1.8, min(net_w * w_scale, (r.preferred_width or 3.6)))
+            l = max(1.8, min(slice_h * 1.3, (r.preferred_length or 3.8)))
             curr_y -= (l + 0.05)
             rx = min_x + (net_w - w) / 2.0
             ry = max(min_y, curr_y)
@@ -662,20 +724,22 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_clustered(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_clustered(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
         cats = categorize_rooms(requirements)
 
-        c1_rooms = cats["outdoor"] + cats["entrance"] + cats["public"]
-        c2_rooms = cats["semi_private"] + [r for r in cats["wet_services"] if "kitchen" in r.room_type] + cats["utility"]
-        c3_rooms = cats["private"] + [r for r in cats["wet_services"] if "kitchen" not in r.room_type]
+        c1_rooms = list(cats["outdoor"] + cats["entrance"] + cats["public"])
+        c2_rooms = list(cats["semi_private"] + [r for r in cats["wet_services"] if "kitchen" in r.room_type] + cats["utility"])
+        c3_rooms = list(cats["private"] + [r for r in cats["wet_services"] if "kitchen" not in r.room_type])
 
         # Cluster 1: Front
         c1_x = min_x
         c1_y = max(min_y, max_y - (net_l * 0.4))
         for r in c1_rooms:
-            w = max(1.8, min(net_w * 0.5, r.preferred_width or 3.8))
-            l = max(1.8, min(net_l * 0.38, r.preferred_length or 4.0))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.5, (r.preferred_width or 3.8) * w_scale))
+            l = max(1.8, min(net_l * 0.38, (r.preferred_length or 4.0) * l_scale))
             doors, wins = build_smart_openings(r.room_type, c1_x, c1_y, w, l, plot.width, plot.length, "south")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -694,8 +758,10 @@ class LayoutStrategyBuilder:
         c2_x = min_x + (net_w * 0.45)
         c2_y = min_y + (net_l * 0.25)
         for r in c2_rooms:
-            w = max(1.8, min(net_w * 0.5, r.preferred_width or 3.2))
-            l = max(1.8, min(net_l * 0.32, r.preferred_length or 3.4))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.5, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(net_l * 0.32, (r.preferred_length or 3.4) * l_scale))
             doors, wins = build_smart_openings(r.room_type, c2_x, c2_y, w, l, plot.width, plot.length, "west")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -714,8 +780,10 @@ class LayoutStrategyBuilder:
         c3_x = min_x
         c3_y = min_y
         for r in c3_rooms:
-            w = max(1.8, min(net_w * 0.45, r.preferred_width or 3.4))
-            l = max(1.8, min(net_l * 0.35, r.preferred_length or 3.6))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.45, (r.preferred_width or 3.4) * w_scale))
+            l = max(1.8, min(net_l * 0.35, (r.preferred_length or 3.6) * l_scale))
             doors, wins = build_smart_openings(r.room_type, c3_x, c3_y, w, l, plot.width, plot.length, "north")
             rooms.append(LayoutRoom(
                 id=f"R-{r.id}-{uuid.uuid4().hex[:4]}",
@@ -732,19 +800,22 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_front_public_rear_private(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_front_public_rear_private(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
         cats = categorize_rooms(requirements)
 
-        split_y = min_y + (net_l * 0.48)
+        split_ratio = rnd.uniform(0.45, 0.52)
+        split_y = min_y + (net_l * split_ratio)
 
-        public_items = cats["outdoor"] + cats["entrance"] + cats["public"] + cats["semi_private"]
+        public_items = list(cats["outdoor"] + cats["entrance"] + cats["public"] + cats["semi_private"])
         cur_x = min_x
         cur_y = split_y
         row_h = 0.0
         for r in public_items:
-            w = max(1.8, min(net_w * 0.48, r.preferred_width or 3.8))
-            l = max(1.8, min(max(2.0, max_y - split_y), r.preferred_length or 4.0))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.48, (r.preferred_width or 3.8) * w_scale))
+            l = max(1.8, min(max(2.0, max_y - split_y), (r.preferred_length or 4.0) * l_scale))
             if cur_x + w > max_x:
                 cur_x = min_x
                 cur_y += row_h + 0.1
@@ -766,13 +837,15 @@ class LayoutStrategyBuilder:
             cur_x += w + 0.1
             row_h = max(row_h, l)
 
-        private_items = cats["private"] + cats["wet_services"] + cats["utility"]
+        private_items = list(cats["private"] + cats["wet_services"] + cats["utility"])
         cur_x = min_x
         cur_y = min_y
         row_h = 0.0
         for r in private_items:
-            w = max(1.8, min(net_w * 0.48, r.preferred_width or 3.2))
-            l = max(1.8, min(max(2.0, split_y - min_y), r.preferred_length or 3.5))
+            w_scale = rnd.uniform(0.9, 1.1)
+            l_scale = rnd.uniform(0.9, 1.1)
+            w = max(1.8, min(net_w * 0.48, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(max(2.0, split_y - min_y), (r.preferred_length or 3.5) * l_scale))
             if cur_x + w > max_x:
                 cur_x = min_x
                 cur_y += row_h + 0.1
@@ -797,20 +870,22 @@ class LayoutStrategyBuilder:
         return rooms
 
     @staticmethod
-    def _layout_compact(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness):
+    def _layout_compact(plot, requirements, min_x, max_x, min_y, max_y, net_w, net_l, vastu_strictness, rnd: random.Random, orient: str):
         rooms: List[LayoutRoom] = []
         cols = 2 if net_w < 12.0 else 3
         col_w = max(2.5, net_w / cols)
 
         cats = categorize_rooms(requirements)
-        sorted_reqs = cats["public"] + cats["semi_private"] + cats["private"] + cats["wet_services"] + cats["utility"] + cats["outdoor"]
+        sorted_reqs = list(cats["public"] + cats["semi_private"] + cats["private"] + cats["wet_services"] + cats["utility"] + cats["outdoor"])
 
         curr_x = min_x
         curr_y = min_y
         col_idx = 0
         for r in sorted_reqs:
-            w = max(1.8, min(col_w, r.preferred_width or 3.2))
-            l = max(1.8, min(net_l * 0.4, r.preferred_length or 3.5))
+            w_scale = rnd.uniform(0.88, 1.12)
+            l_scale = rnd.uniform(0.88, 1.12)
+            w = max(1.8, min(col_w, (r.preferred_width or 3.2) * w_scale))
+            l = max(1.8, min(net_l * 0.4, (r.preferred_length or 3.5) * l_scale))
             if curr_y + l > max_y:
                 col_idx += 1
                 curr_x = min(max_x - w, min_x + (col_idx * col_w))

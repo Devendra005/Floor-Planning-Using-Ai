@@ -1,13 +1,15 @@
 import copy
 import uuid
 import random
+import logging
+import math
 from typing import List, Dict, Any, Optional
 from app.models.pydantic_schemas import (
     PlotConfig, RoomRequirement, LayoutRoom, FloorPlanCandidate,
     OptimizationWeights, VastuProfileEnum
 )
 from app.services.geometry.constraint_solver import (
-    check_rect_overlap, validate_layout_geometry
+    check_rect_overlap, validate_layout_geometry, ROOM_MIN_SPEC
 )
 from app.services.planning.layout_strategies import LayoutStrategyBuilder, STRATEGY_REGISTRY
 from app.services.planning.adjacency_engine import AdjacencyEngine
@@ -15,16 +17,19 @@ from app.services.planning.furniture_validator import FurnitureValidator
 from app.services.planning.plan_signature import PlanSignature
 from app.services.planning.similarity_engine import SimilarityEngine
 from app.services.planning.diversity_engine import DiversityEngine
+from app.services.planning.room_requirements import validate_user_requirements, RequirementValidationError
 from app.services.vastu.vastu_engine import VastuEngine
 from app.services.structure.structural_engine import StructuralEngine
 from app.services.plumbing.plumbing_engine import PlumbingEngine
 from app.services.electrical.electrical_engine import ElectricalEngine
 
+logger = logging.getLogger("vastucraft_api.diversity_solver")
+
 class LayoutDiversitySolver:
     """
     AI Multiple Unique Floor Plan Generation & Layout Diversity Engine.
     Generates genuinely distinct residential architectural layouts using controlled
-    typologies, adjacency graphs, furniture validation, and similarity filtering.
+    typologies, seed variations, adjacency graphs, furniture validation, and similarity filtering.
     """
 
     def __init__(
@@ -34,7 +39,8 @@ class LayoutDiversitySolver:
         weights: OptimizationWeights = OptimizationWeights(),
         vastu_profile: VastuProfileEnum = VastuProfileEnum.TRADITIONAL_BASIC,
         vastu_strictness: str = "BALANCED",
-        max_similarity_threshold: float = 70.0
+        max_similarity_threshold: float = 70.0,
+        seed: Optional[int] = None
     ):
         self.plot = plot
         self.requirements = list(requirements)
@@ -42,11 +48,17 @@ class LayoutDiversitySolver:
         self.vastu_profile = vastu_profile
         self.vastu_strictness = vastu_strictness.upper()
         self.max_similarity_threshold = max_similarity_threshold
+        self.base_seed = seed if seed is not None else random.randint(1000, 999999)
 
         self.vastu_engine = VastuEngine()
         self.structural_engine = StructuralEngine()
         self.plumbing_engine = PlumbingEngine()
         self.electrical_engine = ElectricalEngine()
+
+        # Input Validation & Feasibility Check
+        is_valid, errors, summary = validate_user_requirements(self.plot, self.requirements)
+        if not is_valid:
+            logger.warning(f"Feasibility warning for layout request: {errors}")
 
         # Ensure mandatory Staircase is present
         has_stair = any(r.room_type in ['staircase', 'stair'] for r in self.requirements)
@@ -69,96 +81,169 @@ class LayoutDiversitySolver:
             )
 
     def repair_individual(self, rooms: List[LayoutRoom]) -> List[LayoutRoom]:
-        """Applies exact vector displacement relaxation to guarantee 100% zero room overlap."""
+        """Move colliding rooms to the nearest available position without resizing them."""
         sb = self.plot.setbacks
         min_x, max_x = sb.left, self.plot.width - sb.right
         min_y, max_y = sb.rear, self.plot.length - sb.front
+        net_w, net_l = max_x - min_x, max_y - min_y
 
-        # 1. Clamp inside boundary
         for r in rooms:
-            r.width = max(1.5, min(r.width, max_x - min_x))
-            r.length = max(1.5, min(r.length, max_y - min_y))
+            dimensions = (r.x, r.y, r.width, r.length)
+            if not all(math.isfinite(value) for value in dimensions):
+                continue
+            if r.width <= 0 or r.length <= 0 or r.width > net_w or r.length > net_l:
+                continue
             r.x = max(min_x, min(r.x, max_x - r.width))
             r.y = max(min_y, min(r.y, max_y - r.length))
 
-        # Group by floor_level and repair per floor
         floor_groups: Dict[int, List[LayoutRoom]] = {}
         for r in rooms:
             fl = r.floor_level if r.floor_level is not None else 0
-            if fl not in floor_groups:
-                floor_groups[fl] = []
-            floor_groups[fl].append(r)
+            floor_groups.setdefault(fl, []).append(r)
 
-        for fl, fl_rooms in floor_groups.items():
-            # Vector displacement relaxation loop per floor
-            for _ in range(60):
-                overlap_found = False
-                for i in range(len(fl_rooms)):
-                    for j in range(i + 1, len(fl_rooms)):
-                        r1, r2 = fl_rooms[i], fl_rooms[j]
-                        if check_rect_overlap(r1.x, r1.y, r1.width, r1.length, r2.x, r2.y, r2.width, r2.length):
-                            overlap_found = True
-                            ov_x = min(r1.x + r1.width, r2.x + r2.width) - max(r1.x, r2.x)
-                            ov_y = min(r1.y + r1.length, r2.y + r2.length) - max(r1.y, r2.y)
+        for fl_rooms in floor_groups.values():
+            stairs = [r for r in fl_rooms if r.type.lower() in {"stair", "staircase"}]
+            non_stairs = [r for r in fl_rooms if r.type.lower() not in {"stair", "staircase"}]
+            if any(
+                check_rect_overlap(
+                    first.x, first.y, first.width, first.length,
+                    second.x, second.y, second.width, second.length
+                )
+                for i, first in enumerate(stairs)
+                for second in stairs[i + 1:]
+            ):
+                continue
 
-                            if ov_x <= 0 or ov_y <= 0:
-                                continue
+            remaining = sorted(
+                non_stairs,
+                key=lambda room: room.width * room.length,
+                reverse=True,
+            )
+            search_nodes = 0
 
-                            if ov_x < ov_y:
-                                shift = ov_x / 2.0 + 0.05
-                                if (r1.x + r1.width / 2.0) <= (r2.x + r2.width / 2.0):
-                                    r1.x -= shift
-                                    r2.x += shift
-                                else:
-                                    r1.x += shift
-                                    r2.x -= shift
-                            else:
-                                shift = ov_y / 2.0 + 0.05
-                                if (r1.y + r1.length / 2.0) <= (r2.y + r2.length / 2.0):
-                                    r1.y -= shift
-                                    r2.y += shift
-                                else:
-                                    r1.y += shift
-                                    r2.y -= shift
+            def touching_positions(
+                room: LayoutRoom,
+                placed: List[LayoutRoom],
+            ) -> List[tuple[float, float]]:
+                positions = {(room.x, room.y)}
+                for other in placed:
+                    aligned_y = {
+                        other.y,
+                        other.y + other.length - room.length,
+                        other.y + (other.length - room.length) / 2.0,
+                    }
+                    aligned_x = {
+                        other.x,
+                        other.x + other.width - room.width,
+                        other.x + (other.width - room.width) / 2.0,
+                    }
+                    positions.update(
+                        (x, y)
+                        for x in (other.x - room.width, other.x + other.width)
+                        for y in aligned_y
+                    )
+                    positions.update(
+                        (x, y)
+                        for x in aligned_x
+                        for y in (other.y - room.length, other.y + other.length)
+                    )
 
-                            r1.x = max(min_x, min(r1.x, max_x - r1.width))
-                            r1.y = max(min_y, min(r1.y, max_y - r1.length))
-                            r2.x = max(min_x, min(r2.x, max_x - r2.width))
-                            r2.y = max(min_y, min(r2.y, max_y - r2.length))
+                legal_positions = []
+                for x, y in positions:
+                    if x < min_x or y < min_y or x + room.width > max_x or y + room.length > max_y:
+                        continue
+                    if any(check_rect_overlap(
+                        x, y, room.width, room.length,
+                        other.x, other.y, other.width, other.length
+                    ) for other in placed):
+                        continue
 
-                if not overlap_found:
-                    break
+                    adjacent = any(
+                        (
+                            (x + room.width == other.x or other.x + other.width == x)
+                            and min(y + room.length, other.y + other.length) - max(y, other.y) > 0.4
+                        )
+                        or (
+                            (y + room.length == other.y or other.y + other.length == y)
+                            and min(x + room.width, other.x + other.width) - max(x, other.x) > 0.4
+                        )
+                        for other in placed
+                    )
+                    if adjacent:
+                        distance = abs(x - room.x) + abs(y - room.y)
+                        legal_positions.append((distance, x, y))
 
-            # Fallback packing if overlaps persist on this floor level
-            has_overlap = False
-            for i in range(len(fl_rooms)):
-                for j in range(i + 1, len(fl_rooms)):
-                    if check_rect_overlap(fl_rooms[i].x, fl_rooms[i].y, fl_rooms[i].width, fl_rooms[i].length, fl_rooms[j].x, fl_rooms[j].y, fl_rooms[j].width, fl_rooms[j].length):
-                        has_overlap = True
+                legal_positions.sort()
+                return [(x, y) for _, x, y in legal_positions[:18]]
+
+            def place_remaining(
+                unplaced: List[LayoutRoom],
+                placed: List[LayoutRoom],
+            ) -> bool:
+                nonlocal search_nodes
+                if not unplaced:
+                    return True
+                if search_nodes >= 5000:
+                    return False
+
+                room = unplaced[0]
+                original_x, original_y = room.x, room.y
+                for x, y in touching_positions(room, placed):
+                    search_nodes += 1
+                    room.x, room.y = x, y
+                    if place_remaining(unplaced[1:], placed + [room]):
+                        return True
+                    room.x, room.y = original_x, original_y
+                    if search_nodes >= 5000:
                         break
+                return False
 
-            if has_overlap:
-                curr_x, curr_y, row_h = min_x, min_y, 0.0
-                for r in fl_rooms:
-                    if curr_x + r.width > max_x + 0.01:
-                        curr_x = min_x
-                        curr_y += row_h + 0.1
-                        row_h = 0.0
-                    if curr_y + r.length > max_y + 0.01:
-                        r.width = max(1.5, r.width * 0.88)
-                        r.length = max(1.5, r.length * 0.88)
-
-                    r.x = round(curr_x, 2)
-                    r.y = round(curr_y, 2)
-                    curr_x += r.width + 0.1
-                    row_h = max(row_h, r.length)
+            place_remaining(remaining, list(stairs))
 
         return rooms
+
+    def _candidate_geometry_errors(self, rooms: List[LayoutRoom]) -> List[str]:
+        _, errors = validate_layout_geometry(rooms, self.plot)
+        stair_rooms = [r for r in rooms if r.type.lower() in {"stair", "staircase"}]
+        if not stair_rooms:
+            errors.append("INVALID LAYOUT: Missing required staircase.")
+            return errors
+
+        expected_floors = set(range(max(1, self.plot.floors_count)))
+        stair_floors = {
+            room.floor_level if room.floor_level is not None else 0
+            for room in stair_rooms
+        }
+        if stair_floors != expected_floors:
+            errors.append("INVALID LAYOUT: Staircase is missing from one or more floors.")
+
+        stair_families: Dict[str, List[LayoutRoom]] = {}
+        for room in stair_rooms:
+            base_id, separator, floor_suffix = room.id.rpartition("-F")
+            family_id = (
+                base_id
+                if separator and floor_suffix.isdigit()
+                else room.id
+            )
+            stair_families.setdefault(family_id, []).append(room)
+
+        for family in stair_families.values():
+            footprint = (family[0].x, family[0].y, family[0].width, family[0].length)
+            if any(
+                (room.x, room.y, room.width, room.length) != footprint
+                for room in family[1:]
+            ):
+                errors.append(
+                    f"INVALID LAYOUT: Staircase '{family[0].name}' is not vertically aligned."
+                )
+
+        return errors
 
     def _generate_candidate_for_strategy(
         self,
         strategy_id: str,
-        index: int
+        index: int,
+        seed: int
     ) -> Optional[FloorPlanCandidate]:
         strategy_info = STRATEGY_REGISTRY.get(strategy_id, STRATEGY_REGISTRY["central_corridor"])
         raw_rooms = LayoutStrategyBuilder.build_layout(
@@ -166,16 +251,34 @@ class LayoutDiversitySolver:
             plot=self.plot,
             requirements=self.requirements,
             vastu_profile=self.vastu_profile,
-            vastu_strictness=self.vastu_strictness
+            vastu_strictness=self.vastu_strictness,
+            seed=seed,
+            orientation=getattr(self.plot, 'orientation', 'E')
         )
 
         clean_rooms = self.repair_individual(raw_rooms)
+        geometry_errors = self._candidate_geometry_errors(clean_rooms)
+        if geometry_errors:
+            logger.debug(
+                "Rejecting invalid candidate for strategy %s: %s",
+                strategy_id,
+                geometry_errors,
+            )
+            return None
 
         # Apply Vastu optimization only if STRICT mode is chosen
         if self.vastu_strictness == "STRICT":
             opt_rooms, opt_summary = self.vastu_engine.optimize_layout(clean_rooms, self.plot, self.vastu_profile)
             if opt_summary.get("is_optimized", False):
                 clean_rooms = self.repair_individual(opt_rooms)
+                geometry_errors = self._candidate_geometry_errors(clean_rooms)
+                if geometry_errors:
+                    logger.debug(
+                        "Rejecting optimized candidate for strategy %s: %s",
+                        strategy_id,
+                        geometry_errors,
+                    )
+                    return None
 
         # Multi-domain analytics
         vastu_rep = self.vastu_engine.evaluate_layout(clean_rooms, self.plot, self.vastu_profile)
@@ -190,7 +293,7 @@ class LayoutDiversitySolver:
         desired_adj = AdjacencyEngine.generate_strategy_adjacency_graph(strategy_id, self.requirements)
         adj_score, adj_pos, adj_viols = AdjacencyEngine.evaluate_adjacency_score(clean_rooms, desired_adj)
 
-        # Space utilization
+        # Space utilization / plot utilization
         total_area = sum(r.width * r.length for r in clean_rooms)
         plot_net_area = (self.plot.width - self.plot.setbacks.left - self.plot.setbacks.right) * \
                         (self.plot.length - self.plot.setbacks.front - self.plot.setbacks.rear)
@@ -209,21 +312,23 @@ class LayoutDiversitySolver:
         structural_score = round(min(98.0, 60.0 + (len(x_coords) + len(y_coords)) * 2.5), 1)
         daylight_score = round(min(96.0, 75.0 + (len(clean_rooms) * 2.0)), 1)
 
-        # Multi-objective composite fitness
+        # Multi-objective composite fitness:
+        # 0.30 Vastu, 0.15 Space, 0.15 Circulation, 0.10 Adjacency, 0.10 Plumbing, 0.10 Electrical, 0.10 Utilization
         w_vastu = 0.50 if self.vastu_strictness == "STRICT" else (0.15 if self.vastu_strictness == "FLEXIBLE" else 0.30)
         fitness = (
             w_vastu * vastu_rep.total_score +
-            0.20 * space_score +
+            0.15 * space_score +
             0.15 * circulation_score +
-            0.15 * adj_score +
+            0.10 * adj_score +
             0.10 * furn_score +
-            0.10 * plumbing_rep.total_score
+            0.10 * plumbing_rep.total_score +
+            0.10 * electrical_rep.total_score
         )
 
         sig_data = PlanSignature.extract_signature(clean_rooms, self.plot, strategy_info["name"])
 
         # Smart plan naming
-        plan_letter = chr(65 + index)
+        plan_letter = chr(65 + (index % 26))
         plan_name = f"Plan {plan_letter} — {strategy_info['name']}"
 
         candidate = FloorPlanCandidate(
@@ -258,27 +363,52 @@ class LayoutDiversitySolver:
         self,
         num_candidates: int = 5,
         target_strategies: Optional[List[str]] = None,
-        exclude_signatures: Optional[List[str]] = None
+        exclude_signatures: Optional[List[str]] = None,
+        num_internal_pool: int = 30
     ) -> List[FloorPlanCandidate]:
         """
-        Generates and selects genuinely unique candidate plans across distinct layout strategies.
+        Generates 20–50 candidate layouts internally per user request across multiple seeds
+        and distinct layout strategies, and selects Top 3-5 distinct floor plans.
         """
         strat_keys = target_strategies or list(STRATEGY_REGISTRY.keys())
         raw_candidates: List[FloorPlanCandidate] = []
 
-        # Generate candidates for available strategies
-        for idx, key in enumerate(strat_keys):
-            try:
-                cand = self._generate_candidate_for_strategy(key, idx)
-                if cand:
-                    raw_candidates.append(cand)
-            except Exception as e:
-                continue
+        total_generated = 0
+        invalid_count = 0
+
+        # Replenish rejected candidates so geometry filtering does not collapse diversity.
+        target_pool_size = max(1, num_candidates, num_internal_pool)
+        seeds_per_strategy = max(1, math.ceil(target_pool_size / len(strat_keys)))
+        max_rounds = seeds_per_strategy * 3
+
+        for seed_offset in range(max_rounds):
+            for s_idx, key in enumerate(strat_keys):
+                if len(raw_candidates) >= target_pool_size:
+                    break
+                cand_seed = self.base_seed + (s_idx * 100) + seed_offset
+                total_generated += 1
+                try:
+                    cand = self._generate_candidate_for_strategy(key, len(raw_candidates), cand_seed)
+                    if cand:
+                        raw_candidates.append(cand)
+                    else:
+                        invalid_count += 1
+                except Exception as e:
+                    logger.warning(
+                        "Candidate generation error on strategy %s: %s",
+                        key,
+                        e,
+                        exc_info=True,
+                    )
+                    invalid_count += 1
+            if len(raw_candidates) >= target_pool_size:
+                break
 
         if not raw_candidates:
-            # Fallback to standard central corridor
-            cand = self._generate_candidate_for_strategy("central_corridor", 0)
-            return [cand] if cand else []
+            return []
+
+        # Sort raw candidates by fitness score descending
+        raw_candidates.sort(key=lambda c: c.fitness_score, reverse=True)
 
         # Apply diversity selection filter
         selected = DiversityEngine.select_diverse_candidates(
@@ -288,6 +418,16 @@ class LayoutDiversitySolver:
             max_similarity_threshold=self.max_similarity_threshold,
             exclude_signatures=exclude_signatures
         )
+
+        duplicate_count = len(raw_candidates) - len(selected)
+
+        logger.info(
+            f"FLOOR PLAN GENERATION LOG: seed={self.base_seed} | "
+            f"Generated: {total_generated} | Invalid: {invalid_count} | "
+            f"Duplicate: {duplicate_count} | Valid unique: {len(raw_candidates)} | "
+            f"Returned: {len(selected)}"
+        )
+
         return selected
 
     def generate_different_plan(
@@ -296,7 +436,7 @@ class LayoutDiversitySolver:
         preferred_strategy: Optional[str] = None
     ) -> FloorPlanCandidate:
         """
-        Generates a new plan guaranteed to be distinct from all previous signatures.
+        Generates a new plan guaranteed to be distinct from all previous signatures using fresh seed.
         """
         all_strategies = list(STRATEGY_REGISTRY.keys())
         random.shuffle(all_strategies)
@@ -304,19 +444,21 @@ class LayoutDiversitySolver:
         if preferred_strategy and preferred_strategy in STRATEGY_REGISTRY:
             all_strategies.insert(0, preferred_strategy)
 
-        # Try strategies one by one until finding one meeting similarity constraint
-        for strat in all_strategies:
-            cand = self._generate_candidate_for_strategy(strat, len(exclude_signatures))
-            if not cand:
-                continue
-            if cand.plan_signature in exclude_signatures:
-                continue
+        new_seed = random.randint(100000, 999999)
 
-            # Candidate meets requirement
-            cand.diversity_score = 96.0
-            cand.name = f"Plan Option {len(exclude_signatures)+1} — {cand.layout_strategy}"
-            return cand
+        # Retry invalid geometries before reporting that no new plan can be generated.
+        for seed_offset in range(3):
+            for idx, strat in enumerate(all_strategies):
+                cand = self._generate_candidate_for_strategy(
+                    strat,
+                    len(exclude_signatures),
+                    new_seed + (seed_offset * len(all_strategies) + idx) * 17,
+                )
+                if not cand or cand.plan_signature in exclude_signatures:
+                    continue
 
-        # Fallback return first generated
-        cand = self._generate_candidate_for_strategy("clustered", len(exclude_signatures))
-        return cand
+                cand.diversity_score = 96.0
+                cand.name = f"Plan Option {len(exclude_signatures)+1} — {cand.layout_strategy}"
+                return cand
+
+        raise RuntimeError("Unable to generate a valid plan distinct from the excluded signatures.")

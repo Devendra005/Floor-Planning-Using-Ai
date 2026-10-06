@@ -1,221 +1,173 @@
 import React from 'react';
 import { useProjectStore, TabType } from '../../store/projectStore';
 import {
-  Compass, LayoutGrid, Box, Layers, FileText, Sparkles, Plus, Folder, Upload,
-  Star, Layout, Heart, Video, Image, ShieldCheck, User, Droplet
+  Compass, LayoutGrid, Box, Layers, FileText, Plus, Upload,
+  Star, Image, Heart, Droplet, Layers2, ShieldCheck, Sparkles, SlidersHorizontal
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab, selectedPlan, isMobileMenuOpen, setIsMobileMenuOpen } = useProjectStore();
+
+  const handleNavClick = (tab: TabType) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  };
+
+  const navItemClass = (tab: TabType, isDisabled: boolean = false) => {
+    const isActive = activeTab === tab;
+    if (isDisabled) {
+      return 'w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 cursor-not-allowed select-none';
+    }
+    return `w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+      isActive
+        ? 'bg-blue-50 text-blue-700 font-semibold border border-blue-100 shadow-2xs'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+    }`;
+  };
 
   return (
     <>
       {/* Mobile Drawer Backdrop Overlay */}
       <div
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity duration-200 ${
           isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col justify-between p-4 shrink-0 shadow-2xl transition-transform duration-300 ease-in-out select-none md:static md:w-64 md:translate-x-0 md:z-30 md:shadow-sm ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 w-60 bg-white border-r border-slate-200 flex flex-col justify-between p-3 shrink-0 transition-transform duration-200 ease-in-out select-none md:static md:translate-x-0 md:z-30 ${
+          isMobileMenuOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full md:shadow-none'
         }`}
       >
-      <div className="space-y-5">
-        
-        {/* Brand Header */}
-        <div className="flex items-center space-x-3 px-2 pt-1 pb-2">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shadow-md">
-            <LayoutGrid className="w-5 h-5 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-base text-slate-900 tracking-tight">Floor Plan</h1>
-            <p className="text-[10px] text-blue-600 font-extrabold tracking-wider uppercase">AI Generator</p>
-          </div>
-        </div>
-
-        {/* + New Button */}
-        <button
-          onClick={() => setActiveTab('wizard')}
-          className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-3 rounded-2xl shadow-md transition-all hover:scale-[1.02] active:scale-95 border border-blue-500"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          <span>+ New Design</span>
-        </button>
-
-        {/* Navigation Sections */}
-        <div className="space-y-4 pt-1 max-h-[calc(100vh-18rem)] overflow-y-auto pr-1">
+        <div className="space-y-4">
           
-          {/* Main Home */}
-          <div>
-            <button
-              onClick={() => setActiveTab('home')}
-              className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'home'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Compass className="w-4 h-4 text-blue-600" />
-              <span>Home Dashboard</span>
-            </button>
-          </div>
-
-          {/* LIBRARY */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 block">
-              LIBRARY
-            </span>
-            <div className="space-y-0.5">
-              <button
-                onClick={() => setActiveTab('wizard')}
-                className="w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              >
-                <Folder className="w-4 h-4 text-slate-500" />
-                <span>My Designs</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('vision')}
-                className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              >
-                <div className="flex items-center space-x-3">
-                  <Upload className="w-4 h-4 text-slate-500" />
-                  <span>Uploads</span>
-                </div>
-                <span className="bg-amber-100 text-amber-800 font-black text-[9px] px-1.5 py-0.5 rounded-md uppercase border border-amber-300">NEW</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('editor2d')}
-                className="w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              >
-                <Star className="w-4 h-4 text-slate-500" />
-                <span>Favorites</span>
-              </button>
-            </div>
-          </div>
-
-          {/* EXPLORE */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 block">
-              EXPLORE
-            </span>
-            <div className="space-y-0.5">
-              <button
-                onClick={() => setActiveTab('wizard')}
-                className="w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              >
-                <Layout className="w-4 h-4 text-slate-500" />
-                <span>Templates</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('report')}
-                className="w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-              >
-                <Heart className="w-4 h-4 text-slate-500" />
-                <span>Vastu Inspiration</span>
-              </button>
-            </div>
-          </div>
-
-          {/* VISUALIZE */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 block">
-              VISUALIZE
-            </span>
-            <div className="space-y-0.5">
-              <button
-                disabled={!selectedPlan}
-                onClick={() => setActiveTab('editor2d')}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                  activeTab === 'editor2d'
-                    ? 'bg-blue-50 text-blue-700 font-extrabold border border-blue-200'
-                    : !selectedPlan
-                    ? 'text-slate-400 cursor-not-allowed opacity-40'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Image className="w-4 h-4 text-blue-600" />
-                <span>2D Blueprint</span>
-              </button>
-
-              <button
-                disabled={!selectedPlan}
-                onClick={() => setActiveTab('viewer3d')}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                  activeTab === 'viewer3d'
-                    ? 'bg-indigo-50 text-indigo-700 font-extrabold border border-indigo-200'
-                    : !selectedPlan
-                    ? 'text-slate-400 cursor-not-allowed opacity-40'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Box className="w-4 h-4 text-indigo-600" />
-                <span>3D Model</span>
-              </button>
-
-              <button
-                disabled={!selectedPlan}
-                onClick={() => setActiveTab('steel')}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                  activeTab === 'steel'
-                    ? 'bg-purple-50 text-purple-700 font-extrabold border border-purple-200'
-                    : !selectedPlan
-                    ? 'text-slate-400 cursor-not-allowed opacity-40'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-purple-600" />
-                <span>Steel & BIM</span>
-              </button>
-
-              <button
-                disabled={!selectedPlan}
-                onClick={() => setActiveTab('plumbing')}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                  activeTab === 'plumbing'
-                    ? 'bg-cyan-50 text-cyan-700 font-extrabold border border-cyan-200'
-                    : !selectedPlan
-                    ? 'text-slate-400 cursor-not-allowed opacity-40'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Droplet className="w-4 h-4 text-cyan-600" />
-                <span>Plumbing Planning</span>
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Bottom Upgrade Card */}
-      <div className="space-y-3 pt-3 border-t border-slate-200">
-        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center space-y-2">
-          <p className="text-xs font-extrabold text-slate-900">Full AI Access</p>
-          <p className="text-[10px] text-slate-600 font-medium">Unlimited 2D & 3D floor plan layout generation.</p>
+          {/* Quick Create Action */}
           <button
-            onClick={() => setActiveTab('wizard')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] py-1.5 rounded-xl transition-all shadow-sm"
+            onClick={() => handleNavClick('wizard')}
+            className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 rounded-lg shadow-xs transition-all border border-blue-600"
           >
-            Create New Plan
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Create Floor Plan</span>
           </button>
+
+          {/* Navigation Sections */}
+          <div className="space-y-4 pt-1 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
+            
+            {/* MAIN DASHBOARD */}
+            <div>
+              <button
+                onClick={() => handleNavClick('home')}
+                className={navItemClass('home')}
+              >
+                <Compass className={`w-4 h-4 ${activeTab === 'home' ? 'text-blue-600' : 'text-slate-500'}`} />
+                <span>Dashboard</span>
+              </button>
+            </div>
+
+            {/* DESIGN WORKSPACES */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 block">
+                Workspaces
+              </span>
+              <div className="space-y-0.5">
+                <button
+                  disabled={!selectedPlan}
+                  onClick={() => handleNavClick('editor2d')}
+                  className={navItemClass('editor2d', !selectedPlan)}
+                >
+                  <Image className={`w-4 h-4 ${activeTab === 'editor2d' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>2D Blueprint Studio</span>
+                </button>
+
+                <button
+                  disabled={!selectedPlan}
+                  onClick={() => handleNavClick('viewer3d')}
+                  className={navItemClass('viewer3d', !selectedPlan)}
+                >
+                  <Box className={`w-4 h-4 ${activeTab === 'viewer3d' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>3D BIM Visualizer</span>
+                </button>
+
+                <button
+                  disabled={!selectedPlan}
+                  onClick={() => handleNavClick('comparison')}
+                  className={navItemClass('comparison', !selectedPlan)}
+                >
+                  <Layers2 className={`w-4 h-4 ${activeTab === 'comparison' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>Plan Alternatives</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ENGINEERING & ANALYTICS */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 block">
+                Analysis & BIM
+              </span>
+              <div className="space-y-0.5">
+                <button
+                  disabled={!selectedPlan}
+                  onClick={() => handleNavClick('report')}
+                  className={navItemClass('report', !selectedPlan)}
+                >
+                  <Sparkles className={`w-4 h-4 ${activeTab === 'report' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>Vastu Analysis</span>
+                </button>
+
+                <button
+                  disabled={!selectedPlan}
+                  onClick={() => handleNavClick('steel')}
+                  className={navItemClass('steel', !selectedPlan)}
+                >
+                  <Layers className={`w-4 h-4 ${activeTab === 'steel' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>Steel & Structural</span>
+                </button>
+
+                <button
+                  disabled={!selectedPlan}
+                  onClick={() => handleNavClick('plumbing')}
+                  className={navItemClass('plumbing', !selectedPlan)}
+                >
+                  <Droplet className={`w-4 h-4 ${activeTab === 'plumbing' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>Plumbing Network</span>
+                </button>
+              </div>
+            </div>
+
+            {/* TOOLS & IMPORTS */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 block">
+                Import & Tools
+              </span>
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => handleNavClick('vision')}
+                  className={navItemClass('vision')}
+                >
+                  <Upload className={`w-4 h-4 ${activeTab === 'vision' ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span>Floor Plan OCR / CV</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        <div className="flex items-center space-x-2.5 bg-slate-50 p-2 rounded-xl border border-slate-200 text-slate-800 text-xs">
-          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center font-black text-white text-xs">
-            DEV
-          </div>
-          <div className="overflow-hidden">
-            <p className="font-extrabold text-slate-900 text-[11px] truncate">Devendra</p>
-            <p className="text-[9px] text-blue-600 font-extrabold font-mono">PRO MEMBER</p>
+        {/* User Footer */}
+        <div className="pt-3 border-t border-slate-200 space-y-2">
+          <div className="flex items-center space-x-2.5 px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+            <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center font-bold text-white text-xs">
+              AI
+            </div>
+            <div className="overflow-hidden flex-1">
+              <p className="font-semibold text-slate-900 text-xs truncate">VastuPlan Workspace</p>
+              <p className="text-[10px] text-slate-500 truncate">Vastu & Structural AI Engine</p>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
     </>
   );
 };
+

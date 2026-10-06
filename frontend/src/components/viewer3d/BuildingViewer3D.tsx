@@ -499,32 +499,24 @@ export const BuildingViewer3D: React.FC = () => {
     <div className="h-[calc(100vh-4rem-2.5rem)] bg-slate-50 flex flex-col relative overflow-hidden bg-animated-grid select-none">
       
       {/* 3D Visual Mode & Controls Panel */}
-      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-20 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl space-y-3 max-w-[calc(100vw-1.5rem)] sm:max-w-xs shadow-xl border border-slate-200 animate-slide-up max-h-[80vh] overflow-y-auto">
+      <div className="absolute top-4 left-4 z-20 bg-white/95 backdrop-blur-md p-4 rounded-xl space-y-3 max-w-xs shadow-md border border-slate-200 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Eye className="w-4 h-4 text-blue-600 shrink-0" />
-            <span className="font-extrabold text-slate-900 text-xs uppercase tracking-widest">3D BIM Mode</span>
+            <span className="font-bold text-slate-900 text-xs uppercase tracking-wider">3D BIM Studio</span>
           </div>
 
           <div className="flex items-center space-x-1">
-            {/* Auto-Orbit 360 Toggle Button */}
+            {/* Auto-Rotate Toggle */}
             <button
               onClick={() => setAutoRotate(!autoRotate)}
-              className={`p-1.5 rounded-lg border text-[10px] font-bold flex items-center space-x-1 transition-all ${
-                autoRotate ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-700 border-slate-300'
+              className={`p-1 px-2 rounded text-[10px] font-semibold flex items-center space-x-1 transition-all ${
+                autoRotate ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 text-slate-600'
               }`}
-              title="Toggle Auto-Orbit 360° Animation"
+              title="Toggle Auto-Rotate 360°"
             >
               {autoRotate ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
               <span>360°</span>
-            </button>
-
-            {/* Mobile Expand / Collapse Toggle */}
-            <button
-              onClick={() => setIsPanelOpen(!isPanelOpen)}
-              className="sm:hidden p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-black"
-            >
-              {isPanelOpen ? '−' : '+'}
             </button>
           </div>
         </div>
@@ -534,13 +526,12 @@ export const BuildingViewer3D: React.FC = () => {
             <select
               value={visualMode3D}
               onChange={(e) => setVisualMode3D(e.target.value as VisualMode3D)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-2xl px-3 py-2 text-xs text-slate-900 font-extrabold focus:outline-none focus:border-blue-500 shadow-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600"
             >
               <option value="exterior">Exterior Render View</option>
-              <option value="steel_only">Steel-Only Rebar View</option>
+              <option value="steel_only">Steel Rebar Mesh View</option>
               <option value="cutaway">Horizontal Cutaway Section</option>
-              <option value="transparent">Transparent Concrete Mode</option>
-              <option value="interior">Interior Walkthrough View</option>
+              <option value="transparent">Transparent Glass Mode</option>
               <option value="wireframe">Wireframe Model View</option>
               <option value="structural">Structural Frame View</option>
               <option value="top">Top Orthographic View</option>
