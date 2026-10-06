@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useProjectStore } from '../store/projectStore';
 import { PlotConfig, RoomRequirement, UnitType, OrientationType, VastuProfileType, OptimizationWeights } from '../types';
-import { createProjectApi, generateMultipleLayoutsApi, DEMO_REQUIREMENTS } from '../services/api';
+import { createProjectApi, generateMultipleLayoutsApi } from '../services/api';
 import { convertToMeters, convertFromMeters } from '../utils/units';
 import { FloorPlanEditor2D } from '../components/editor2d/FloorPlanEditor2D';
 import {
@@ -14,6 +14,7 @@ export const WizardPage: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<number>(0);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   // Form State
@@ -116,11 +117,7 @@ export const WizardPage: React.FC = () => {
     return reqs;
   };
 
-  const [requirements, setRequirements] = useState<RoomRequirement[]>(DEMO_REQUIREMENTS);
-
-  React.useEffect(() => {
-    setRequirements(buildRequirementsFromDirectInputs());
-  }, [bedroomCount, washroomCount, hasPujaRoom, hasLivingRoom, hasMasterBedroom]);
+  const requirements = buildRequirementsFromDirectInputs();
 
   // Vastu & Optimization Weights
   const [vastuProfile, setVastuProfile] = useState<VastuProfileType>('traditional-basic');
@@ -151,6 +148,7 @@ export const WizardPage: React.FC = () => {
   const handleGenerate = async () => {
     setLoading(true);
     setLoadingStep(0);
+    setGenerationError(null);
 
     const stepInterval = setInterval(() => {
       setLoadingStep((prev) => (prev < generationSteps.length - 1 ? prev + 1 : prev));
@@ -195,27 +193,29 @@ export const WizardPage: React.FC = () => {
         weights: weightsNorm
       });
 
-      try {
-        const uniquePlans = await generateMultipleLayoutsApi({
-          plot: plotMeters,
-          requirements,
-          weights: weightsNorm,
-          vastu_profile: vastuProfile,
-          num_candidates: numPlans,
-          vastu_strictness: vastuStrictness,
-          max_similarity_threshold: similarityThreshold
-        });
-        if (uniquePlans && uniquePlans.length > 0) {
-          project.plans = uniquePlans;
-        }
-      } catch (genErr) {
-        console.warn('Using project initial layout plans', genErr);
+      const uniquePlans = await generateMultipleLayoutsApi({
+        plot: plotMeters,
+        requirements,
+        weights: weightsNorm,
+        vastu_profile: vastuProfile,
+        num_candidates: numPlans,
+        vastu_strictness: vastuStrictness,
+        max_similarity_threshold: similarityThreshold
+      });
+      if (uniquePlans.length === 0) {
+        throw new Error('The layout engine could not create a valid plan for these inputs.');
       }
+      project.plans = uniquePlans;
 
       setCurrentProject(project);
       setActiveTab('comparison');
     } catch (err) {
       console.error('Failed to generate project:', err);
+      setGenerationError(
+        err instanceof Error
+          ? err.message
+          : 'Floor plan generation failed. Check that the backend is running and try again.'
+      );
     } finally {
       clearInterval(stepInterval);
       setLoading(false);
@@ -490,6 +490,12 @@ export const WizardPage: React.FC = () => {
           </div>
 
           {/* Primary Action Button */}
+          {generationError && (
+            <div role="alert" className="flex items-start space-x-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{generationError}</span>
+            </div>
+          )}
           <button
             onClick={handleGenerate}
             disabled={loading}
@@ -554,4 +560,3 @@ export const WizardPage: React.FC = () => {
     </div>
   );
 };
-

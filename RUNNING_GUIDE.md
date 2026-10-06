@@ -105,6 +105,8 @@ npm install
 npm run dev
 ```
 
+In development, Vite proxies `/api/v1` requests to the backend at `http://127.0.0.1:8000`. Start the backend first; if it is unavailable, plan generation reports the API error instead of showing a fixed fallback layout.
+
 Expected Terminal Output:
 ```
   VITE v8.2.1  ready in 450 ms

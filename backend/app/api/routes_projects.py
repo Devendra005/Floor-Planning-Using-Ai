@@ -50,22 +50,6 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
         weights_data=payload.weights.model_dump()
     )
     db.add(proj_db)
-    
-    for plan in generated_plans:
-        fp_db = FloorPlanDB(
-            id=plan.id,
-            project_id=proj_id,
-            name=plan.name,
-            fitness_score=plan.fitness_score,
-            vastu_score=plan.vastu_score,
-            plumbing_score=plan.plumbing_score or 85.0,
-            rooms_data=[r.model_dump() for r in plan.rooms],
-            vastu_report_data=plan.vastu_report.model_dump(),
-            structure_data=plan.structure.model_dump(),
-            plumbing_data=plan.plumbing.model_dump() if plan.plumbing else None,
-            electrical_data=plan.electrical.model_dump() if plan.electrical else None
-        )
-        db.add(fp_db)
 
     db.commit()
     db.refresh(proj_db)

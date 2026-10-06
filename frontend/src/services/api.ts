@@ -1,10 +1,35 @@
 import {
   Project, PlotConfig, RoomRequirement, OptimizationWeights, VastuProfileType,
-  FloorPlanCandidate, VastuEvaluationReport, PreliminaryStructure,
+  FloorPlanCandidate,
   MultiGenerationRequest, DifferentPlanRequest, PlanSimilarityDetail, LayoutStrategyInfo, LayoutRoom
 } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+async function requestApiJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  if (!response.ok) {
+    const responseBody = await response.text();
+    let detail = responseBody;
+    try {
+      const parsed: unknown = JSON.parse(responseBody);
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'detail' in parsed &&
+        typeof parsed.detail === 'string'
+      ) {
+        detail = parsed.detail;
+      }
+    } catch {
+      // Keep the response text when the server did not return JSON.
+    }
+    throw new Error(
+      `API request failed (${response.status} ${response.statusText})${detail ? `: ${detail}` : '.'}`
+    );
+  }
+  return response.json() as Promise<T>;
+}
 
 // Seed demo data for 30x40 ft East Facing Plot
 export const DEMO_PLOT: PlotConfig = {
@@ -39,18 +64,11 @@ export async function createProjectApi(payload: {
   vastu_profile: VastuProfileType;
   weights: OptimizationWeights;
 }): Promise<Project> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/projects`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('API server error');
-    return await res.json();
-  } catch (err) {
-    console.warn('Backend API unavailable. Using fast client-side layout solver.', err);
-    return generateFallbackProject(payload);
-  }
+  return requestApiJson<Project>(`${API_BASE_URL}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function generateLayoutsApi(payload: {
@@ -59,47 +77,31 @@ export async function generateLayoutsApi(payload: {
   weights: OptimizationWeights;
   vastu_profile: VastuProfileType;
 }): Promise<FloorPlanCandidate[]> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('API server error');
-    return await res.json();
-  } catch (err) {
-    console.warn('Backend API offline, serving fallback generated candidates.');
-    return generateFallbackCandidates(payload.plot, payload.requirements);
-  }
-}
-
-export async function generateMultipleLayoutsApi(payload: MultiGenerationRequest): Promise<FloorPlanCandidate[]> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/generate/multiple`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('API server error');
-    return await res.json();
-  } catch (err) {
-    console.warn('Backend API offline, serving diverse fallback candidates.');
-    return generateFallbackCandidates(payload.plot, payload.requirements);
-  }
-}
-
-export async function generateDifferentLayoutApi(payload: DifferentPlanRequest): Promise<FloorPlanCandidate> {
-  const res = await fetch(`${API_BASE_URL}/generate/different`, {
+  return requestApiJson<FloorPlanCandidate[]>(`${API_BASE_URL}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Failed to generate different layout from server.');
-  return await res.json();
+}
+
+export async function generateMultipleLayoutsApi(payload: MultiGenerationRequest): Promise<FloorPlanCandidate[]> {
+  return requestApiJson<FloorPlanCandidate[]>(`${API_BASE_URL}/generate/multiple`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function generateDifferentLayoutApi(payload: DifferentPlanRequest): Promise<FloorPlanCandidate> {
+  return requestApiJson<FloorPlanCandidate>(`${API_BASE_URL}/generate/different`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function comparePlanSimilarityApi(planA: FloorPlanCandidate, planB: FloorPlanCandidate, plot: PlotConfig): Promise<PlanSimilarityDetail> {
-  const res = await fetch(`${API_BASE_URL}/generate/similarity`, {
+  return requestApiJson<PlanSimilarityDetail>(`${API_BASE_URL}/generate/similarity`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -108,8 +110,6 @@ export async function comparePlanSimilarityApi(planA: FloorPlanCandidate, planB:
       plot
     })
   });
-  if (!res.ok) throw new Error('Similarity check failed.');
-  return await res.json();
 }
 
 export async function getLayoutStrategiesApi(): Promise<LayoutStrategyInfo[]> {

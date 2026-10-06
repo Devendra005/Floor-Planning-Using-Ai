@@ -129,6 +129,30 @@ def test_input_variation_changes_layout(sample_requirements):
     sim = SimilarityEngine.calculate_similarity(cands1[0].rooms, cands2[0].rooms, plot1)
     assert sim["overall_similarity"] < 80.0
 
+def test_added_room_requirement_changes_generated_room_set(sample_plot, sample_requirements):
+    expanded_requirements = sample_requirements + [
+        RoomRequirement(
+            id="8",
+            name="Third Bedroom",
+            room_type="bedroom",
+            min_width=3.0,
+            min_length=3.0,
+            preferred_width=3.3,
+            preferred_length=3.6,
+        )
+    ]
+    solver = LayoutDiversitySolver(
+        plot=sample_plot,
+        requirements=expanded_requirements,
+        max_similarity_threshold=75.0,
+        seed=31337,
+    )
+
+    candidates = solver.generate_multiple_unique_plans(num_candidates=1)
+
+    assert candidates
+    assert any(room.name.startswith("Third Bedroom") for room in candidates[0].rooms)
+
 def test_seed_variation_changes_layout(sample_plot, sample_requirements):
     """Test 2: Same input + different generation seed produces different valid layouts."""
     solver1 = LayoutDiversitySolver(plot=sample_plot, requirements=sample_requirements, seed=101)

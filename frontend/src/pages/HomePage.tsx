@@ -7,20 +7,29 @@ import {
 
 export const HomePage: React.FC = () => {
   const { setActiveTab, setCurrentProject, selectedPlan } = useProjectStore();
+  const [generationError, setGenerationError] = React.useState<string | null>(null);
 
   const handleLaunchDemo = async () => {
-    const demoProj = await createProjectApi({
-      name: 'Sample Villa (30 × 40 ft East Facing)',
-      description: 'Pre-configured 2BHK residential home with Puja Room, Kitchen & Parking',
-      project_type: 'Residential Single Family',
-      location: 'Bangalore, India',
-      plot: DEMO_PLOT,
-      requirements: DEMO_REQUIREMENTS,
-      vastu_profile: 'traditional-basic',
-      weights: { vastu: 0.35, space_utilization: 0.20, circulation: 0.15, adjacency: 0.15, structural_alignment: 0.10, daylight_ventilation: 0.05 }
-    });
-    setCurrentProject(demoProj);
-    setActiveTab('editor2d');
+    setGenerationError(null);
+    try {
+      const demoProj = await createProjectApi({
+        name: 'Sample Villa (30 × 40 ft East Facing)',
+        description: 'Pre-configured 2BHK residential home with Puja Room, Kitchen & Parking',
+        project_type: 'Residential Single Family',
+        location: 'Bangalore, India',
+        plot: DEMO_PLOT,
+        requirements: DEMO_REQUIREMENTS,
+        vastu_profile: 'traditional-basic',
+        weights: { vastu: 0.35, space_utilization: 0.20, circulation: 0.15, adjacency: 0.15, structural_alignment: 0.10, daylight_ventilation: 0.05 }
+      });
+      setCurrentProject(demoProj);
+      setActiveTab('editor2d');
+    } catch (err) {
+      console.error('Failed to load demo project:', err);
+      setGenerationError(
+        err instanceof Error ? err.message : 'Unable to load the demo project. Check that the backend is running.'
+      );
+    }
   };
 
   return (
@@ -59,6 +68,11 @@ export const HomePage: React.FC = () => {
               <span>Explore Demo (30×40 ft Villa)</span>
             </button>
           </div>
+          {generationError && (
+            <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              {generationError}
+            </div>
+          )}
         </div>
       </div>
 
@@ -194,4 +208,3 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
-
