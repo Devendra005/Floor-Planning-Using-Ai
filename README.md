@@ -107,10 +107,12 @@ cd Floor-Planning-Using-Ai
      source venv/bin/activate
      ```
 
-3. Install required Python packages:
+3. Install the project backend dependencies from the requirements file:
    ```bash
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
+   The backend requirements include FastAPI, Uvicorn, OpenCV, NumPy, SQLAlchemy, Shapely, Pillow, Python-dotenv, and Psycopg.
 
 4. Run the FastAPI development server:
    ```bash

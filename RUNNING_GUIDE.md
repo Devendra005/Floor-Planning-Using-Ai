@@ -46,6 +46,8 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+The backend requirements include the packages required for the app to run correctly, including FastAPI, Uvicorn, OpenCV (`cv2`), NumPy, SQLAlchemy, Shapely, Pillow, Python-dotenv, and Psycopg. If you are setting up a fresh environment, this command is the recommended way to install everything in one step.
+
 To use PostgreSQL, copy `backend/.env.example` to `backend/.env` and replace `DATABASE_URL` with your provider's connection URL. The backend accepts a standard `postgresql://` URL and uses Psycopg 3. Leave your existing local `.env` on SQLite if you still want SQLite for local development.
 
 ### Step 1.4: Run Pytest Test Suite (Verification)
@@ -166,7 +168,7 @@ If running `uvicorn` gives:
 | Issue / Error | Cause | Solution |
 | :--- | :--- | :--- |
 | `[WinError 10013]` / `[Errno 10048]` | Port 8000 is already occupied | Stop PID via `Stop-Process -Id <PID> -Force` or run on `--port 8001`. |
-| `ModuleNotFoundError: No module named 'cv2'` | OpenCV not installed in venv | Run `pip install opencv-python numpy` in active virtualenv. |
+| `ModuleNotFoundError: No module named 'cv2'` | OpenCV / backend dependencies are not installed in the active venv | Run `pip install -r requirements.txt` in the backend directory, or install the missing package(s) individually. |
 | `TypeError: cannot unpack non-iterable numpy.int32` | OpenCV `findContours`/`HoughLinesP` structure | Fixed in codebase. Run `python -m pytest tests` to verify. |
 | `vite command not found` | Node packages not installed | Run `npm install` inside `frontend/` directory. |
 | `CORS Error in Browser Console` | Backend server not running | Ensure FastAPI server is active on `http://localhost:8000`. |
